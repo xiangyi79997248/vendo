@@ -59,7 +59,7 @@
         <button id="navSiteBtn" onclick="switchVendorView('site')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 border">
           <span>🏗️</span> 案場廠商查詢
         </button>
-        <button id="navEditBtn" onclick="prepareCreateNewVendor()" class="bg-emerald-600 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-500 transition flex items-center gap-1">
+        <button id="navEditBtn" onclick="prepareCreateNewVendor()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-500 transition flex items-center gap-1">
           <span>➕</span> 建立 / 修改廠商
         </button>
       </div>
@@ -385,10 +385,10 @@
             </div>
           </div>
 
-          <!-- 動態無限新增聯絡人區塊 (已移除下方重複的工程名稱欄位) -->
+          <!-- 動態無限新增聯絡人區塊 (每個案場都有各自對應的使用單位資訊) -->
           <div class="space-y-3 pt-2 border-t border-slate-200">
             <div class="flex justify-between items-center">
-              <h4 class="text-xs font-bold text-slate-700">👤 工程聯絡人清單 (每位聯絡人可無限新增多個案場)</h4>
+              <h4 class="text-xs font-bold text-slate-700">👤 工程聯絡人清單 (每位聯絡人可新增多個案場，每個案場各有對應的使用單位)</h4>
               <button type="button" onclick="addEngContactCard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg shadow font-semibold transition flex items-center gap-1">
                 <span>➕</span> 新增一位工程聯絡人
               </button>
@@ -496,22 +496,13 @@
           </div>
         </div>
 
-        <div class="space-y-2 bg-emerald-50/40 p-3 rounded-lg border border-emerald-200/60">
+        <!-- 案場與各自使用單位清單區塊 -->
+        <div class="space-y-3 bg-emerald-50/40 p-3 rounded-lg border border-emerald-200/60">
           <div class="flex justify-between items-center">
-            <label class="block text-[11px] font-bold text-emerald-900">📍 聯絡人專屬案場清單</label>
-            <button type="button" onclick="addSiteInput(${index})" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] px-2.5 py-1 rounded font-semibold transition">＋ 新增案場</button>
+            <label class="block text-[11px] font-bold text-emerald-900">📍 此聯絡人負責的案場與對應使用單位清單</label>
+            <button type="button" onclick="addSiteWithUnitInput(${index})" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] px-2.5 py-1 rounded font-semibold transition">＋ 新增案場與使用單位</button>
           </div>
-          <div id="sitesList_${index}" class="space-y-1.5"></div>
-        </div>
-
-        <div class="bg-slate-100/70 p-3 rounded-lg border border-slate-200 space-y-2">
-          <h6 class="text-[11px] font-bold text-slate-700">🏢 此聯絡人對應的使用單位資訊</h6>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <input type="text" id="ec_${index}_UseName" value="${data.useName || ''}" placeholder="使用單位名稱 (如: 南門里活動中心)" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
-            <input type="text" id="ec_${index}_UseTel" value="${data.useTel || ''}" placeholder="使用單位電話" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
-            <input type="text" id="ec_${index}_UseContact" value="${data.useContact || ''}" placeholder="使用單位聯絡人 (如: 蘇雅子里長)" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
-            <input type="text" id="ec_${index}_UseAddress" value="${data.useAddress || ''}" placeholder="使用單位地址" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
-          </div>
+          <div id="sitesList_${index}" class="space-y-3"></div>
         </div>
 
         <div class="flex items-center gap-3 pt-1">
@@ -530,28 +521,38 @@
       }
 
       const sitesListContainer = document.getElementById(`sitesList_${index}`);
-      let sitesArr = [];
-      if (Array.isArray(data.sites)) {
-        sitesArr = data.sites;
-      } else if (typeof data.siteName === 'string' && data.siteName.trim()) {
-        sitesArr = data.siteName.split('\n').map(s => s.trim()).filter(Boolean);
+      let siteUnitsArr = [];
+      if (Array.isArray(data.siteUnits)) {
+        siteUnitsArr = data.siteUnits;
+      } else if (Array.isArray(data.sites)) {
+        siteUnitsArr = data.sites.map(s => ({ siteName: s, useName: data.useName || '', useTel: data.useTel || '', useContact: data.useContact || '', useAddress: data.useAddress || '' }));
+      } else {
+        siteUnitsArr = [{ siteName: data.siteName || '', useName: data.useName || '', useTel: data.useTel || '', useContact: data.useContact || '', useAddress: data.useAddress || '' }];
       }
 
-      if (sitesArr.length === 0) {
-        addSiteInput(index, '');
+      if (siteUnitsArr.length === 0 || (siteUnitsArr.length === 1 && !siteUnitsArr[0].siteName)) {
+        addSiteWithUnitInput(index);
       } else {
-        sitesArr.forEach(s => addSiteInput(index, s));
+        siteUnitsArr.forEach(su => addSiteWithUnitInput(index, su));
       }
     }
 
-    function addSiteInput(contactIndex, val = '') {
+    function addSiteWithUnitInput(contactIndex, su = {}) {
       const container = document.getElementById(`sitesList_${contactIndex}`);
       if (!container) return;
       const row = document.createElement('div');
-      row.className = "flex gap-1.5 items-center";
+      row.className = "site-unit-row bg-white p-3 rounded-lg border border-emerald-200/80 space-y-2 relative shadow-sm";
       row.innerHTML = `
-        <input type="text" value="${val}" placeholder="輸入案場名稱..." class="site-input-${contactIndex} flex-1 border border-slate-300 rounded px-2.5 py-1 text-xs bg-white font-medium">
-        <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded bg-white border border-red-200">✕</button>
+        <div class="flex gap-2 items-center">
+          <input type="text" value="${su.siteName || ''}" placeholder="輸入案場名稱..." class="site-name-input-${contactIndex} flex-1 border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white font-medium">
+          <button type="button" onclick="this.closest('.site-unit-row').remove()" class="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded bg-red-50 border border-red-200">✕ 刪除此案場</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <input type="text" value="${su.useName || ''}" placeholder="使用單位名稱 (如: 南門里活動中心)" class="site-usename-input-${contactIndex} w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          <input type="text" value="${su.useTel || ''}" placeholder="使用單位電話" class="site-usetel-input-${contactIndex} w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          <input type="text" value="${su.useContact || ''}" placeholder="使用單位聯絡人 (如: 蘇雅子里長)" class="site-usecontact-input-${contactIndex} w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          <input type="text" value="${su.useAddress || ''}" placeholder="使用單位地址" class="site-useaddress-input-${contactIndex} w-full border border-slate-300 rounded px-2 py-1 text-xs">
+        </div>
       `;
       container.appendChild(row);
     }
@@ -1101,9 +1102,19 @@
         const index = idMatch[1];
         const key = `c${idx + 1}`;
 
-        const siteInputs = div.querySelectorAll(`.site-input-${index}`);
-        const sitesArr = Array.from(siteInputs).map(input => input.value.trim()).filter(Boolean);
-        allSites.push(...sitesArr);
+        const siteUnitRows = div.querySelectorAll('.site-unit-row');
+        const siteUnitsArr = [];
+        siteUnitRows.forEach(row => {
+          const sName = row.querySelector(`.site-name-input-${index}`)?.value.trim() || '';
+          const uName = row.querySelector(`.site-usename-input-${index}`)?.value.trim() || '';
+          const uTel = row.querySelector(`.site-usetel-input-${index}`)?.value.trim() || '';
+          const uContact = row.querySelector(`.site-usecontact-input-${index}`)?.value.trim() || '';
+          const uAddress = row.querySelector(`.site-useaddress-input-${index}`)?.value.trim() || '';
+          if (sName) {
+            siteUnitsArr.push({ siteName: sName, useName: uName, useTel: uTel, useContact: uContact, useAddress: uAddress });
+            allSites.push(sName);
+          }
+        });
 
         contactsObj[key] = {
           name: document.getElementById(`ec_${index}_Name`)?.value.trim() || '',
@@ -1113,16 +1124,11 @@
           tel: document.getElementById(`ec_${index}_Tel`)?.value.trim() || '',
           duty: document.getElementById(`ec_${index}_Duty`)?.value.trim() || '',
           email: document.getElementById(`ec_${index}_Email`)?.value.trim() || '',
-          sites: sitesArr,
-          useName: document.getElementById(`ec_${index}_UseName`)?.value.trim() || '',
-          useTel: document.getElementById(`ec_${index}_UseTel`)?.value.trim() || '',
-          useContact: document.getElementById(`ec_${index}_UseContact`)?.value.trim() || '',
-          useAddress: document.getElementById(`ec_${index}_UseAddress`)?.value.trim() || '',
+          siteUnits: siteUnitsArr,
           cardImg: contactCardBase64Map[index] || ''
         };
       });
 
-      // 自動將所有聯絡人的案場彙整為整張單子的專案名稱
       const projectName = allSites.length > 0 ? allSites.join('、') : (name + ' 相關工程');
 
       const eData = {
@@ -1185,7 +1191,7 @@
           addEngContactCard(contacts[k]);
         });
       } else if (item.contactPerson) {
-        addEngContactCard({ name: item.contactPerson, tel: item.tel, ext: item.extOrMobile, sites: [item.projectName], useName: item.useUnitName, useTel: item.useUnitTel, useContact: item.useUnitContact, useAddress: item.useUnitAddress });
+        addEngContactCard({ name: item.contactPerson, tel: item.tel, ext: item.extOrMobile, siteUnits: [{ siteName: item.projectName, useName: item.useUnitName, useTel: item.useUnitTel, useContact: item.useUnitContact, useAddress: item.useUnitAddress }] });
       } else {
         addEngContactCard();
       }
@@ -1219,7 +1225,7 @@
       const list = (appData.engineering || []).filter(item => {
         const matchCat = item.category === activeEngCategory;
         const matchKw = !kw || [item.name, item.projectName, item.taxId, item.tel, item.fax].some(x => x && x.toLowerCase().includes(kw)) ||
-          Object.values(item.contacts || {}).some(c => Object.values(c).some(val => Array.isArray(val) ? val.some(v => v.toLowerCase().includes(kw)) : (val && val.toLowerCase().includes(kw))));
+          Object.values(item.contacts || {}).some(c => Object.values(c).some(val => Array.isArray(val) ? val.some(v => typeof v === 'object' ? Object.values(v).some(sub => sub && sub.toLowerCase().includes(kw)) : v.toLowerCase().includes(kw)) : (val && val.toLowerCase().includes(kw))));
         return matchCat && matchKw;
       });
 
@@ -1228,24 +1234,23 @@
         return;
       }
 
-      // 依聯絡人各自填寫的案場來建立群組反查
       const grouped = {};
       list.forEach(item => {
-        let hasContactSite = false;
+        let hasSite = false;
         const contacts = item.contacts || {};
         Object.values(contacts).forEach(c => {
-          let sitesArr = Array.isArray(c.sites) ? c.sites : (c.siteName ? c.siteName.split('\n') : []);
-          sitesArr.forEach(s => {
-            let cleanS = s.trim().replace(/^[\d\.\\(\)\\s\-]+/, '').trim();
+          let siteUnitsArr = Array.isArray(c.siteUnits) ? c.siteUnits : (Array.isArray(c.sites) ? c.sites.map(s => ({ siteName: s })) : []);
+          siteUnitsArr.forEach(su => {
+            let cleanS = (su.siteName || '').trim().replace(/^[\d\.\\(\)\\s\-]+/, '').trim();
             if (cleanS) {
-              hasContactSite = true;
+              hasSite = true;
               if (!grouped[cleanS]) grouped[cleanS] = [];
               if (!grouped[cleanS].includes(item)) grouped[cleanS].push(item);
             }
           });
         });
 
-        if (!hasContactSite) {
+        if (!hasSite) {
           const rawProj = (item.projectName || '未命名工程').trim();
           const cleanProj = rawProj.replace(/^[\d\.\\(\)\\s\-]+/, '').trim() || rawProj;
           if (!grouped[cleanProj]) grouped[cleanProj] = [];
@@ -1283,9 +1288,22 @@
           const contacts = it.contacts || (it.contactPerson ? { c1: { name: it.contactPerson, tel: it.tel, ext: it.extOrMobile } } : {});
           Object.values(contacts).forEach(c => {
             if (c && c.name) {
-              let sitesArr = Array.isArray(c.sites) ? c.sites : (c.siteName ? c.siteName.split('\n') : []);
-              let cleanSites = sitesArr.map(s => s.trim().replace(/^[\d\.\\(\)\\s\-]+/, '')).filter(Boolean);
-              let sitesDisplay = cleanSites.join('、');
+              let siteUnitsArr = Array.isArray(c.siteUnits) ? c.siteUnits : (Array.isArray(c.sites) ? c.sites.map(s => ({ siteName: s, useName: c.useName, useTel: c.useTel, useContact: c.useContact, useAddress: c.useAddress })) : []);
+              
+              let siteUnitsHtml = '';
+              siteUnitsArr.forEach(su => {
+                let cleanSite = (su.siteName || '').trim().replace(/^[\d\.\\(\)\\s\-]+/, '').trim();
+                if (cleanSite) {
+                  siteUnitsHtml += `
+                    <div class="bg-emerald-50/50 p-2 rounded border border-emerald-100 text-slate-700 space-y-0.5 mt-1.5">
+                      <p class="font-bold text-emerald-900">📍 案場：${cleanSite}</p>
+                      ${su.useName ? `<p class="font-semibold">🏢 使用單位：${su.useName} ${su.useContact ? `(${su.useContact})` : ''}</p>` : ''}
+                      ${su.useTel ? `<p>電話：${su.useTel}</p>` : ''}
+                      ${su.useAddress ? `<p>地址：${su.useAddress}</p>` : ''}
+                    </div>
+                  `;
+                }
+              });
 
               contactsHtml += `
                 <div class="bg-white p-3 rounded-lg border border-slate-200 text-xs space-y-2">
@@ -1297,14 +1315,7 @@
                       ${c.ext ? `<span>分機: ${c.ext}</span>` : ''}
                     </div>
                   </div>
-                  ${sitesDisplay ? `<p class="text-emerald-800 font-semibold">📍 負責案場：${sitesDisplay}</p>` : ''}
-                  ${c.useName ? `
-                    <div class="bg-emerald-50/60 p-2 rounded border border-emerald-100 text-slate-700 space-y-0.5">
-                      <p class="font-bold text-emerald-900">🏢 使用單位：${c.useName} ${c.useContact ? `(${c.useContact})` : ''}</p>
-                      ${c.useTel ? `<p>電話：${c.useTel}</p>` : ''}
-                      ${c.useAddress ? `<p>地址：${c.useAddress}</p>` : ''}
-                    </div>
-                  ` : ''}
+                  ${siteUnitsHtml}
                   ${c.cardImg ? `<div><button onclick="openLightbox('${c.cardImg}')" class="text-[11px] text-emerald-600 underline">📇 查看聯絡人名片</button></div>` : ''}
                 </div>
               `;
@@ -1342,9 +1353,9 @@
         const contacts = item.contacts || {};
         let addedAny = false;
         Object.values(contacts).forEach(c => {
-          let sitesArr = Array.isArray(c.sites) ? c.sites : (c.siteName ? c.siteName.split('\n') : []);
-          sitesArr.forEach(s => {
-            let cleanS = s.trim().replace(/^[\d\.\\(\)\\s\-]+/, '').trim();
+          let siteUnitsArr = Array.isArray(c.siteUnits) ? c.siteUnits : (Array.isArray(c.sites) ? c.sites.map(s => ({ siteName: s })) : []);
+          siteUnitsArr.forEach(su => {
+            let cleanS = (su.siteName || '').trim().replace(/^[\d\.\\(\)\\s\-]+/, '').trim();
             if (cleanS) {
               addedAny = true;
               if (!siteMap[cleanS]) siteMap[cleanS] = [];
