@@ -59,7 +59,7 @@
         <button id="navSiteBtn" onclick="switchVendorView('site')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 border">
           <span>🏗️</span> 案場廠商查詢
         </button>
-        <button id="navEditBtn" onclick="prepareCreateNewVendor()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-500 transition flex items-center gap-1">
+        <button id="navEditBtn" onclick="prepareCreateNewVendor()" class="bg-emerald-600 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-500 transition flex items-center gap-1">
           <span>➕</span> 建立 / 修改廠商
         </button>
       </div>
@@ -385,27 +385,15 @@
             </div>
           </div>
 
-          <!-- 10位聯絡人區塊 -->
-          <div class="space-y-3 pt-2">
-            <h4 class="text-xs font-bold text-slate-700">👤 工程聯絡人清單 (最多 10 位，含各自寬敞案場欄位與獨立名片)</h4>
-            <div id="engContactsContainer" class="space-y-4"></div>
-          </div>
-
-          <!-- 使用單位相關資訊 -->
-          <div class="bg-emerald-50/60 p-4 rounded-xl border border-emerald-200 space-y-3">
-            <h4 class="text-xs font-bold text-emerald-800">🏢 使用單位相關資訊 (填寫)</h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div><input type="text" id="eUseUnitName" placeholder="使用單位名稱 (如: 民主社區活動中心)" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm"></div>
-              <div><input type="text" id="eUseUnitTel" placeholder="使用單位電話" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm"></div>
-              <div><input type="text" id="eUseUnitContact" placeholder="使用單位聯絡人" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm"></div>
-              <div><input type="text" id="eUseUnitAddress" placeholder="使用單位地址" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm"></div>
+          <!-- 動態無限新增聯絡人區塊 (已移除下方重複的工程名稱欄位) -->
+          <div class="space-y-3 pt-2 border-t border-slate-200">
+            <div class="flex justify-between items-center">
+              <h4 class="text-xs font-bold text-slate-700">👤 工程聯絡人清單 (每位聯絡人可無限新增多個案場)</h4>
+              <button type="button" onclick="addEngContactCard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg shadow font-semibold transition flex items-center gap-1">
+                <span>➕</span> 新增一位工程聯絡人
+              </button>
             </div>
-          </div>
-
-          <!-- 工程名稱 (已放大改為 Textarea 方便輸入多行工程名稱) -->
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">工程名稱 (案場名稱) *</label>
-            <textarea id="eProjectName" rows="3" required class="w-full border border-slate-300 rounded p-3 text-sm font-medium" placeholder="例如：溪頂溪東里聯合活動中心耐震補強工程..."></textarea>
+            <div id="engContactsContainer" class="space-y-4"></div>
           </div>
 
           <div>
@@ -457,67 +445,116 @@
     let currentEngEditId = null;
     let currentEngCardBase64 = "";
     let activeEngCategory = "主辦機關";
+    let engContactCount = 0;
+    let contactCardBase64Map = {};
 
-    function initEngContactFields() {
+    function addEngContactCard(data = {}) {
+      engContactCount++;
+      const index = engContactCount;
       const container = document.getElementById('engContactsContainer');
       if (!container) return;
-      let html = '';
-      for (let i = 1; i <= 10; i++) {
-        html += `
-          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-            <h5 class="text-xs font-bold text-slate-700 flex justify-between items-center">
-              <span>聯絡人 (${i})</span>
-            </h5>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-              <div>
-                <label class="block text-[10px] text-slate-500 mb-0.5">姓名</label>
-                <input type="text" id="ec${i}Name" placeholder="姓名" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white">
-              </div>
-              <div>
-                <label class="block text-[10px] text-slate-500 mb-0.5">職稱</label>
-                <input type="text" id="ec${i}Title" placeholder="職稱" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white">
-              </div>
-              <div>
-                <label class="block text-[10px] text-slate-500 mb-0.5">手機</label>
-                <input type="text" id="ec${i}Mobile" placeholder="手機" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white">
-              </div>
-              <div>
-                <label class="block text-[10px] text-slate-500 mb-0.5">分機</label>
-                <input type="text" id="ec${i}Ext" placeholder="分機" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white">
-              </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-              <div>
-                <label class="block text-[10px] text-slate-500 mb-0.5">市話</label>
-                <input type="text" id="ec${i}Tel" placeholder="市話" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white">
-              </div>
-              <div>
-                <label class="block text-[10px] text-slate-500 mb-0.5">負責項目</label>
-                <input type="text" id="ec${i}Duty" placeholder="負責項目" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white">
-              </div>
-              <div>
-                <label class="block text-[10px] text-slate-500 mb-0.5">E-mail</label>
-                <input type="text" id="ec${i}Email" placeholder="E-mail" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white">
-              </div>
-            </div>
-            <div>
-              <label class="block text-[10px] font-semibold text-emerald-800 mb-0.5">📍 聯絡人專屬案場名稱 (可填寫多個案場)</label>
-              <textarea id="ec${i}SiteName" rows="2" placeholder="輸入此聯絡人負責的案場名稱..." class="w-full border border-slate-300 rounded px-3 py-2 text-xs bg-white font-medium"></textarea>
-            </div>
-            <div class="flex items-center gap-3 pt-1">
-              <label class="text-[11px] text-slate-600 font-medium">📇 聯絡人名片：</label>
-              <input type="file" id="ec${i}CardInput" accept="image/*" class="text-xs text-slate-500" onchange="handleContactCardUpload(event, ${i})">
-              <div class="relative cursor-pointer" onclick="openLightbox(contactCardBase64Map[${i}])">
-                <img id="ec${i}CardPreview" class="h-10 rounded shadow-sm hidden border bg-white object-contain" alt="名片預覽">
-              </div>
-            </div>
+
+      const cardDiv = document.createElement('div');
+      cardDiv.className = "bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 relative";
+      cardDiv.id = `engContactCard_${index}`;
+
+      cardDiv.innerHTML = `
+        <div class="flex justify-between items-center border-b pb-1.5">
+          <h5 class="text-xs font-bold text-slate-700">👤 聯絡人 (#${index})</h5>
+          <button type="button" onclick="document.getElementById('engContactCard_${index}').remove()" class="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-0.5 rounded bg-red-50 border border-red-200">✕ 刪除此聯絡人</button>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+          <div>
+            <label class="block text-[10px] text-slate-500 mb-0.5">姓名 *</label>
+            <input type="text" id="ec_${index}_Name" value="${data.name || ''}" placeholder="聯絡人姓名" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white font-medium">
           </div>
-        `;
+          <div>
+            <label class="block text-[10px] text-slate-500 mb-0.5">職稱</label>
+            <input type="text" id="ec_${index}_Title" value="${data.title || ''}" placeholder="職稱" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white">
+          </div>
+          <div>
+            <label class="block text-[10px] text-slate-500 mb-0.5">手機</label>
+            <input type="text" id="ec_${index}_Mobile" value="${data.mobile || ''}" placeholder="手機" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white">
+          </div>
+          <div>
+            <label class="block text-[10px] text-slate-500 mb-0.5">分機</label>
+            <input type="text" id="ec_${index}_Ext" value="${data.ext || ''}" placeholder="分機" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white">
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+          <div>
+            <label class="block text-[10px] text-slate-500 mb-0.5">市話</label>
+            <input type="text" id="ec_${index}_Tel" value="${data.tel || ''}" placeholder="市話" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white">
+          </div>
+          <div>
+            <label class="block text-[10px] text-slate-500 mb-0.5">負責項目</label>
+            <input type="text" id="ec_${index}_Duty" value="${data.duty || ''}" placeholder="負責項目" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white">
+          </div>
+          <div>
+            <label class="block text-[10px] text-slate-500 mb-0.5">E-mail</label>
+            <input type="text" id="ec_${index}_Email" value="${data.email || ''}" placeholder="E-mail" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white">
+          </div>
+        </div>
+
+        <div class="space-y-2 bg-emerald-50/40 p-3 rounded-lg border border-emerald-200/60">
+          <div class="flex justify-between items-center">
+            <label class="block text-[11px] font-bold text-emerald-900">📍 聯絡人專屬案場清單</label>
+            <button type="button" onclick="addSiteInput(${index})" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] px-2.5 py-1 rounded font-semibold transition">＋ 新增案場</button>
+          </div>
+          <div id="sitesList_${index}" class="space-y-1.5"></div>
+        </div>
+
+        <div class="bg-slate-100/70 p-3 rounded-lg border border-slate-200 space-y-2">
+          <h6 class="text-[11px] font-bold text-slate-700">🏢 此聯絡人對應的使用單位資訊</h6>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <input type="text" id="ec_${index}_UseName" value="${data.useName || ''}" placeholder="使用單位名稱 (如: 南門里活動中心)" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
+            <input type="text" id="ec_${index}_UseTel" value="${data.useTel || ''}" placeholder="使用單位電話" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
+            <input type="text" id="ec_${index}_UseContact" value="${data.useContact || ''}" placeholder="使用單位聯絡人 (如: 蘇雅子里長)" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
+            <input type="text" id="ec_${index}_UseAddress" value="${data.useAddress || ''}" placeholder="使用單位地址" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 pt-1">
+          <label class="text-[11px] text-slate-600 font-medium">📇 聯絡人名片：</label>
+          <input type="file" id="ec_${index}_CardInput" accept="image/*" class="text-xs text-slate-500" onchange="handleContactCardUpload(event, ${index})">
+          <div class="relative cursor-pointer" onclick="openLightbox(contactCardBase64Map[${index}])">
+            <img id="ec_${index}_CardPreview" class="h-10 rounded shadow-sm ${data.cardImg ? '' : 'hidden'} border bg-white object-contain" src="${data.cardImg || ''}" alt="名片預覽">
+          </div>
+        </div>
+      `;
+
+      container.appendChild(cardDiv);
+
+      if (data.cardImg) {
+        contactCardBase64Map[index] = data.cardImg;
       }
-      container.innerHTML = html;
+
+      const sitesListContainer = document.getElementById(`sitesList_${index}`);
+      let sitesArr = [];
+      if (Array.isArray(data.sites)) {
+        sitesArr = data.sites;
+      } else if (typeof data.siteName === 'string' && data.siteName.trim()) {
+        sitesArr = data.siteName.split('\n').map(s => s.trim()).filter(Boolean);
+      }
+
+      if (sitesArr.length === 0) {
+        addSiteInput(index, '');
+      } else {
+        sitesArr.forEach(s => addSiteInput(index, s));
+      }
     }
 
-    let contactCardBase64Map = {};
+    function addSiteInput(contactIndex, val = '') {
+      const container = document.getElementById(`sitesList_${contactIndex}`);
+      if (!container) return;
+      const row = document.createElement('div');
+      row.className = "flex gap-1.5 items-center";
+      row.innerHTML = `
+        <input type="text" value="${val}" placeholder="輸入案場名稱..." class="site-input-${contactIndex} flex-1 border border-slate-300 rounded px-2.5 py-1 text-xs bg-white font-medium">
+        <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded bg-white border border-red-200">✕</button>
+      `;
+      container.appendChild(row);
+    }
 
     function handleContactCardUpload(event, index) {
       const file = event.target.files[0];
@@ -535,7 +572,7 @@
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
           const base64 = canvas.toDataURL('image/jpeg', 0.75);
           contactCardBase64Map[index] = base64;
-          const prev = document.getElementById(`ec${index}CardPreview`);
+          const prev = document.getElementById(`ec_${index}_CardPreview`);
           if (prev) { prev.src = base64; prev.classList.remove('hidden'); }
         };
         img.src = e.target.result;
@@ -639,7 +676,7 @@
         filterVendors();
       } else if (view === 'site') {
         document.getElementById('viewVendorSite').classList.remove('hidden');
-        document.getElementById('navSiteBtn').className = "bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-800 transition";
+        document.getElementById('navSiteBtn').className = "bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-500 transition";
         renderSiteQuery();
       } else {
         document.getElementById('viewVendorEdit').classList.remove('hidden');
@@ -1037,7 +1074,9 @@
       currentEngCardBase64 = "";
       contactCardBase64Map = {};
       document.getElementById('engForm').reset();
-      initEngContactFields();
+      document.getElementById('engContactsContainer').innerHTML = '';
+      engContactCount = 0;
+      addEngContactCard();
       document.getElementById('eCategory').value = activeEngCategory;
       document.getElementById('engFormModeTag').innerText = "新增工程聯繫";
       document.getElementById('engFormTitle').innerText = "建立工程聯繫資料";
@@ -1050,23 +1089,41 @@
       e.preventDefault();
       const category = document.getElementById('eCategory').value;
       const name = document.getElementById('eName').value.trim();
-      const projectName = document.getElementById('eProjectName').value.trim();
-      if (!name || !projectName) { alert('單位名稱與工程名稱為必填'); return; }
+      if (!name) { alert('單位 / 公司名稱為必填'); return; }
 
       const contactsObj = {};
-      for (let i = 1; i <= 10; i++) {
-        contactsObj[`c${i}`] = {
-          name: document.getElementById(`ec${i}Name`)?.value.trim() || '',
-          title: document.getElementById(`ec${i}Title`)?.value.trim() || '',
-          mobile: document.getElementById(`ec${i}Mobile`)?.value.trim() || '',
-          ext: document.getElementById(`ec${i}Ext`)?.value.trim() || '',
-          tel: document.getElementById(`ec${i}Tel`)?.value.trim() || '',
-          duty: document.getElementById(`ec${i}Duty`)?.value.trim() || '',
-          email: document.getElementById(`ec${i}Email`)?.value.trim() || '',
-          siteName: document.getElementById(`ec${i}SiteName`)?.value.trim() || '',
-          cardImg: contactCardBase64Map[i] || ''
+      const cardDivs = document.querySelectorAll('#engContactsContainer > div');
+      let allSites = [];
+
+      cardDivs.forEach((div, idx) => {
+        const idMatch = div.id.match(/engContactCard_(\d+)/);
+        if (!idMatch) return;
+        const index = idMatch[1];
+        const key = `c${idx + 1}`;
+
+        const siteInputs = div.querySelectorAll(`.site-input-${index}`);
+        const sitesArr = Array.from(siteInputs).map(input => input.value.trim()).filter(Boolean);
+        allSites.push(...sitesArr);
+
+        contactsObj[key] = {
+          name: document.getElementById(`ec_${index}_Name`)?.value.trim() || '',
+          title: document.getElementById(`ec_${index}_Title`)?.value.trim() || '',
+          mobile: document.getElementById(`ec_${index}_Mobile`)?.value.trim() || '',
+          ext: document.getElementById(`ec_${index}_Ext`)?.value.trim() || '',
+          tel: document.getElementById(`ec_${index}_Tel`)?.value.trim() || '',
+          duty: document.getElementById(`ec_${index}_Duty`)?.value.trim() || '',
+          email: document.getElementById(`ec_${index}_Email`)?.value.trim() || '',
+          sites: sitesArr,
+          useName: document.getElementById(`ec_${index}_UseName`)?.value.trim() || '',
+          useTel: document.getElementById(`ec_${index}_UseTel`)?.value.trim() || '',
+          useContact: document.getElementById(`ec_${index}_UseContact`)?.value.trim() || '',
+          useAddress: document.getElementById(`ec_${index}_UseAddress`)?.value.trim() || '',
+          cardImg: contactCardBase64Map[index] || ''
         };
-      }
+      });
+
+      // 自動將所有聯絡人的案場彙整為整張單子的專案名稱
+      const projectName = allSites.length > 0 ? allSites.join('、') : (name + ' 相關工程');
 
       const eData = {
         id: currentEngEditId || Date.now().toString(),
@@ -1079,11 +1136,7 @@
         docAddress1: document.getElementById('eDocAddress1').value.trim(),
         docAddress2: document.getElementById('eDocAddress2').value.trim(),
         contacts: contactsObj,
-        useUnitName: document.getElementById('eUseUnitName').value.trim(),
-        useUnitTel: document.getElementById('eUseUnitTel').value.trim(),
-        useUnitContact: document.getElementById('eUseUnitContact').value.trim(),
-        useUnitAddress: document.getElementById('eUseUnitAddress').value.trim(),
-        projectName,
+        projectName: projectName,
         remark: document.getElementById('eRemark').value.trim(),
         cardImg: currentEngCardBase64
       };
@@ -1111,7 +1164,8 @@
       document.getElementById('engFormTitle').innerText = `修改：${item.name}`;
       document.getElementById('deleteEngBtn').classList.remove('hidden');
 
-      initEngContactFields();
+      document.getElementById('engContactsContainer').innerHTML = '';
+      engContactCount = 0;
       contactCardBase64Map = {};
 
       document.getElementById('eCategory').value = item.category || '主辦機關';
@@ -1124,29 +1178,18 @@
       document.getElementById('eDocAddress1').value = item.docAddress1 || '';
       document.getElementById('eDocAddress2').value = item.docAddress2 || '';
       
-      for (let i = 1; i <= 10; i++) {
-        const cData = item.contacts?.[`c${i}`] || (i === 1 && item.contactPerson ? { name: item.contactPerson, tel: item.tel, ext: item.extOrMobile, siteName: item.projectName } : {});
-        if (document.getElementById(`ec${i}Name`)) document.getElementById(`ec${i}Name`).value = cData.name || '';
-        if (document.getElementById(`ec${i}Title`)) document.getElementById(`ec${i}Title`).value = cData.title || '';
-        if (document.getElementById(`ec${i}Mobile`)) document.getElementById(`ec${i}Mobile`).value = cData.mobile || '';
-        if (document.getElementById(`ec${i}Ext`)) document.getElementById(`ec${i}Ext`).value = cData.ext || '';
-        if (document.getElementById(`ec${i}Tel`)) document.getElementById(`ec${i}Tel`).value = cData.tel || '';
-        if (document.getElementById(`ec${i}Duty`)) document.getElementById(`ec${i}Duty`).value = cData.duty || '';
-        if (document.getElementById(`ec${i}Email`)) document.getElementById(`ec${i}Email`).value = cData.email || '';
-        if (document.getElementById(`ec${i}SiteName`)) document.getElementById(`ec${i}SiteName`).value = cData.siteName || '';
-
-        if (cData.cardImg) {
-          contactCardBase64Map[i] = cData.cardImg;
-          const prev = document.getElementById(`ec${i}CardPreview`);
-          if (prev) { prev.src = cData.cardImg; prev.classList.remove('hidden'); }
-        }
+      const contacts = item.contacts || {};
+      const contactKeys = Object.keys(contacts);
+      if (contactKeys.length > 0) {
+        contactKeys.forEach(k => {
+          addEngContactCard(contacts[k]);
+        });
+      } else if (item.contactPerson) {
+        addEngContactCard({ name: item.contactPerson, tel: item.tel, ext: item.extOrMobile, sites: [item.projectName], useName: item.useUnitName, useTel: item.useUnitTel, useContact: item.useUnitContact, useAddress: item.useUnitAddress });
+      } else {
+        addEngContactCard();
       }
 
-      document.getElementById('eUseUnitName').value = item.useUnitName || '';
-      document.getElementById('eUseUnitTel').value = item.useUnitTel || '';
-      document.getElementById('eUseUnitContact').value = item.useUnitContact || '';
-      document.getElementById('eUseUnitAddress').value = item.useUnitAddress || '';
-      document.getElementById('eProjectName').value = item.projectName || '';
       document.getElementById('eRemark').value = item.remark || '';
 
       currentEngCardBase64 = item.cardImg || "";
@@ -1176,7 +1219,7 @@
       const list = (appData.engineering || []).filter(item => {
         const matchCat = item.category === activeEngCategory;
         const matchKw = !kw || [item.name, item.projectName, item.taxId, item.tel, item.fax].some(x => x && x.toLowerCase().includes(kw)) ||
-          Object.values(item.contacts || {}).some(c => Object.values(c).some(val => val && val.toLowerCase().includes(kw)));
+          Object.values(item.contacts || {}).some(c => Object.values(c).some(val => Array.isArray(val) ? val.some(v => v.toLowerCase().includes(kw)) : (val && val.toLowerCase().includes(kw))));
         return matchCat && matchKw;
       });
 
@@ -1185,13 +1228,29 @@
         return;
       }
 
+      // 依聯絡人各自填寫的案場來建立群組反查
       const grouped = {};
       list.forEach(item => {
-        const rawProj = (item.projectName || '未命名工程').trim();
-        // 自動把最前面的數字、點或空白拿掉 (例如 "1. 臺南市..." 變成 "臺南市...")
-        const cleanProj = rawProj.replace(/^[\d\.\\(\)\\s\-]+/, '').trim() || rawProj;
-        if (!grouped[cleanProj]) grouped[cleanProj] = [];
-        grouped[cleanProj].push(item);
+        let hasContactSite = false;
+        const contacts = item.contacts || {};
+        Object.values(contacts).forEach(c => {
+          let sitesArr = Array.isArray(c.sites) ? c.sites : (c.siteName ? c.siteName.split('\n') : []);
+          sitesArr.forEach(s => {
+            let cleanS = s.trim().replace(/^[\d\.\\(\)\\s\-]+/, '').trim();
+            if (cleanS) {
+              hasContactSite = true;
+              if (!grouped[cleanS]) grouped[cleanS] = [];
+              if (!grouped[cleanS].includes(item)) grouped[cleanS].push(item);
+            }
+          });
+        });
+
+        if (!hasContactSite) {
+          const rawProj = (item.projectName || '未命名工程').trim();
+          const cleanProj = rawProj.replace(/^[\d\.\\(\)\\s\-]+/, '').trim() || rawProj;
+          if (!grouped[cleanProj]) grouped[cleanProj] = [];
+          if (!grouped[cleanProj].includes(item)) grouped[cleanProj].push(item);
+        }
       });
 
       Object.keys(grouped).forEach(projName => {
@@ -1224,19 +1283,28 @@
           const contacts = it.contacts || (it.contactPerson ? { c1: { name: it.contactPerson, tel: it.tel, ext: it.extOrMobile } } : {});
           Object.values(contacts).forEach(c => {
             if (c && c.name) {
-              // 清理聯絡人專屬案場名稱前面的數字
-              let cleanSiteName = (c.siteName || '').trim().replace(/^[\d\.\\(\)\\s\-]+/, '').trim();
+              let sitesArr = Array.isArray(c.sites) ? c.sites : (c.siteName ? c.siteName.split('\n') : []);
+              let cleanSites = sitesArr.map(s => s.trim().replace(/^[\d\.\\(\)\\s\-]+/, '')).filter(Boolean);
+              let sitesDisplay = cleanSites.join('、');
+
               contactsHtml += `
-                <div class="bg-white p-2.5 rounded-lg border border-slate-200 text-xs space-y-1.5">
-                  <div class="flex flex-wrap gap-2 items-center justify-between">
-                    <div><span class="font-bold text-slate-800">👤 ${c.name}</span> ${c.title ? `(${c.title})` : ''} ${c.duty ? `- <span class="text-emerald-700">${c.duty}</span>` : ''}</div>
+                <div class="bg-white p-3 rounded-lg border border-slate-200 text-xs space-y-2">
+                  <div class="flex flex-wrap gap-2 items-center justify-between border-b pb-1.5">
+                    <div><span class="font-bold text-slate-800 text-sm">👤 ${c.name}</span> ${c.title ? `(${c.title})` : ''} ${c.duty ? `- <span class="text-emerald-700">${c.duty}</span>` : ''}</div>
                     <div class="space-x-2 text-slate-600">
-                      ${c.mobile ? `<span>📱 <a href="tel:${c.mobile}" class="text-emerald-600">${c.mobile}</a></span>` : ''}
-                      ${c.tel ? `<span>📞 <a href="tel:${c.tel}" class="text-emerald-600">${c.tel}</a></span>` : ''}
+                      ${c.mobile ? `<span>📱 <a href="tel:${c.mobile}" class="text-emerald-600 font-medium">${c.mobile}</a></span>` : ''}
+                      ${c.tel ? `<span>📞 <a href="tel:${c.tel}" class="text-emerald-600 font-medium">${c.tel}</a></span>` : ''}
                       ${c.ext ? `<span>分機: ${c.ext}</span>` : ''}
                     </div>
                   </div>
-                  ${cleanSiteName ? `<p class="text-emerald-800 font-semibold whitespace-pre-line">📍 負責案場：${cleanSiteName}</p>` : ''}
+                  ${sitesDisplay ? `<p class="text-emerald-800 font-semibold">📍 負責案場：${sitesDisplay}</p>` : ''}
+                  ${c.useName ? `
+                    <div class="bg-emerald-50/60 p-2 rounded border border-emerald-100 text-slate-700 space-y-0.5">
+                      <p class="font-bold text-emerald-900">🏢 使用單位：${c.useName} ${c.useContact ? `(${c.useContact})` : ''}</p>
+                      ${c.useTel ? `<p>電話：${c.useTel}</p>` : ''}
+                      ${c.useAddress ? `<p>地址：${c.useAddress}</p>` : ''}
+                    </div>
+                  ` : ''}
                   ${c.cardImg ? `<div><button onclick="openLightbox('${c.cardImg}')" class="text-[11px] text-emerald-600 underline">📇 查看聯絡人名片</button></div>` : ''}
                 </div>
               `;
@@ -1253,15 +1321,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-1 text-xs text-slate-600">
               ${infoHtml}
             </div>
-            ${contactsHtml ? `<div class="space-y-1.5 pt-1"><p class="text-[11px] font-semibold text-slate-500">聯絡人清單：</p>${contactsHtml}</div>` : ''}
-            ${it.useUnitName ? `
-              <div class="mt-2 bg-white p-2.5 rounded-lg border border-emerald-100 text-xs text-slate-600 space-y-1">
-                <p class="font-semibold text-emerald-800 flex items-center gap-1"><span>🏢</span> 使用單位：${it.useUnitName}</p>
-                ${it.useUnitTel ? `<p>電話：${it.useUnitTel}</p>` : ''}
-                ${it.useUnitContact ? `<p>聯絡人：${it.useUnitContact}</p>` : ''}
-                ${it.useUnitAddress ? `<p>地址：${it.useUnitAddress}</p>` : ''}
-              </div>
-            ` : ''}
+            ${contactsHtml ? `<div class="space-y-2 pt-1"><p class="text-[11px] font-semibold text-slate-500">聯絡人清單：</p>${contactsHtml}</div>` : ''}
             ${it.cardImg ? `<div class="pt-1"><button onclick="openLightbox('${it.cardImg}')" class="text-xs text-emerald-600 underline">📇 查看主單位名片</button></div>` : ''}
           `;
           card.appendChild(inner);
@@ -1279,12 +1339,28 @@
 
       const siteMap = {};
       (appData.engineering || []).forEach(item => {
-        const rawProj = (item.projectName || '').trim();
-        if (!rawProj) return;
-        // 清理案場名稱前面的數字 (例如 "1. 臺南市..." 變成 "臺南市...")
-        const cleanProj = rawProj.replace(/^[\d\.\\(\)\\s\-]+/, '').trim() || rawProj;
-        if (!siteMap[cleanProj]) siteMap[cleanProj] = [];
-        siteMap[cleanProj].push(item);
+        const contacts = item.contacts || {};
+        let addedAny = false;
+        Object.values(contacts).forEach(c => {
+          let sitesArr = Array.isArray(c.sites) ? c.sites : (c.siteName ? c.siteName.split('\n') : []);
+          sitesArr.forEach(s => {
+            let cleanS = s.trim().replace(/^[\d\.\\(\)\\s\-]+/, '').trim();
+            if (cleanS) {
+              addedAny = true;
+              if (!siteMap[cleanS]) siteMap[cleanS] = [];
+              if (!siteMap[cleanS].includes(item)) siteMap[cleanS].push(item);
+            }
+          });
+        });
+
+        if (!addedAny) {
+          const rawProj = (item.projectName || '').trim();
+          if (rawProj) {
+            const cleanProj = rawProj.replace(/^[\d\.\\(\)\\s\-]+/, '').trim() || rawProj;
+            if (!siteMap[cleanProj]) siteMap[cleanProj] = [];
+            if (!siteMap[cleanProj].includes(item)) siteMap[cleanProj].push(item);
+          }
+        }
       });
 
       Object.keys(siteMap).slice(0, 10).forEach(projName => {
@@ -1379,7 +1455,7 @@
       reader.readAsText(file);
     }
 
-    initEngContactFields();
+    addEngContactCard();
     refreshCategoryOptions();
     refreshCodeOptions();
     filterVendors();
