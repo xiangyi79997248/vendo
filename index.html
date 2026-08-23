@@ -1181,15 +1181,17 @@
       });
 
       if (list.length === 0) {
-        container.innerHTML = `<div class="bg-white p-12 text-center text-slate-400 rounded-2xl border shadow-sm">尚無「${activeEngCategory}」相關的工程聯繫資料</div>`;
+        container.innerHTML = `<div class="bg-white p-12 text-center text-slate-400 rounded-2xl border shadow-sm">尚無資料</div>`;
         return;
       }
 
       const grouped = {};
       list.forEach(item => {
-        const proj = item.projectName || '未命名工程';
-        if (!grouped[proj]) grouped[proj] = [];
-        grouped[proj].push(item);
+        const rawProj = (item.projectName || '未命名工程').trim();
+        // 自動把最前面的數字、點或空白拿掉 (例如 "1. 臺南市..." 變成 "臺南市...")
+        const cleanProj = rawProj.replace(/^[\d\.\\(\)\\s\-]+/, '').trim() || rawProj;
+        if (!grouped[cleanProj]) grouped[cleanProj] = [];
+        grouped[cleanProj].push(item);
       });
 
       Object.keys(grouped).forEach(projName => {
@@ -1222,6 +1224,8 @@
           const contacts = it.contacts || (it.contactPerson ? { c1: { name: it.contactPerson, tel: it.tel, ext: it.extOrMobile } } : {});
           Object.values(contacts).forEach(c => {
             if (c && c.name) {
+              // 清理聯絡人專屬案場名稱前面的數字
+              let cleanSiteName = (c.siteName || '').trim().replace(/^[\d\.\\(\)\\s\-]+/, '').trim();
               contactsHtml += `
                 <div class="bg-white p-2.5 rounded-lg border border-slate-200 text-xs space-y-1.5">
                   <div class="flex flex-wrap gap-2 items-center justify-between">
@@ -1232,7 +1236,7 @@
                       ${c.ext ? `<span>分機: ${c.ext}</span>` : ''}
                     </div>
                   </div>
-                  ${c.siteName ? `<p class="text-emerald-800 font-semibold whitespace-pre-line">📍 負責案場：${c.siteName}</p>` : ''}
+                  ${cleanSiteName ? `<p class="text-emerald-800 font-semibold whitespace-pre-line">📍 負責案場：${cleanSiteName}</p>` : ''}
                   ${c.cardImg ? `<div><button onclick="openLightbox('${c.cardImg}')" class="text-[11px] text-emerald-600 underline">📇 查看聯絡人名片</button></div>` : ''}
                 </div>
               `;
@@ -1275,10 +1279,12 @@
 
       const siteMap = {};
       (appData.engineering || []).forEach(item => {
-        const proj = (item.projectName || '').trim();
-        if (!proj) return;
-        if (!siteMap[proj]) siteMap[proj] = [];
-        siteMap[proj].push(item);
+        const rawProj = (item.projectName || '').trim();
+        if (!rawProj) return;
+        // 清理案場名稱前面的數字 (例如 "1. 臺南市..." 變成 "臺南市...")
+        const cleanProj = rawProj.replace(/^[\d\.\\(\)\\s\-]+/, '').trim() || rawProj;
+        if (!siteMap[cleanProj]) siteMap[cleanProj] = [];
+        siteMap[cleanProj].push(item);
       });
 
       Object.keys(siteMap).slice(0, 10).forEach(projName => {
