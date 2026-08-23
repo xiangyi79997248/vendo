@@ -385,7 +385,7 @@
             </div>
           </div>
 
-          <!-- 10位聯絡人區塊 (案場名稱放大為 Textarea) -->
+          <!-- 10位聯絡人區塊 -->
           <div class="space-y-3 pt-2">
             <h4 class="text-xs font-bold text-slate-700">👤 工程聯絡人清單 (最多 10 位，含各自寬敞案場欄位與獨立名片)</h4>
             <div id="engContactsContainer" class="space-y-4"></div>
@@ -402,9 +402,10 @@
             </div>
           </div>
 
+          <!-- 工程名稱 (已放大改為 Textarea 方便輸入多行工程名稱) -->
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">工程名稱 (案場名稱) *</label>
-            <input type="text" id="eProjectName" required class="w-full border border-slate-300 rounded px-3 py-2 text-sm" placeholder="例如：溪頂溪東里聯合活動中心耐震補強工程...">
+            <textarea id="eProjectName" rows="3" required class="w-full border border-slate-300 rounded p-3 text-sm font-medium" placeholder="例如：溪頂溪東里聯合活動中心耐震補強工程..."></textarea>
           </div>
 
           <div>
@@ -457,7 +458,6 @@
     let currentEngCardBase64 = "";
     let activeEngCategory = "主辦機關";
 
-    // 初始化 10 位聯絡人（案場名稱改為較大的 textarea）
     function initEngContactFields() {
       const container = document.getElementById('engContactsContainer');
       if (!container) return;
@@ -500,12 +500,10 @@
                 <input type="text" id="ec${i}Email" placeholder="E-mail" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white">
               </div>
             </div>
-            <!-- 案場名稱欄位（放大改為 Textarea，方便輸入多個案場） -->
             <div>
               <label class="block text-[10px] font-semibold text-emerald-800 mb-0.5">📍 聯絡人專屬案場名稱 (可填寫多個案場)</label>
               <textarea id="ec${i}SiteName" rows="2" placeholder="輸入此聯絡人負責的案場名稱..." class="w-full border border-slate-300 rounded px-3 py-2 text-xs bg-white font-medium"></textarea>
             </div>
-            <!-- 各自獨立的名片上傳 -->
             <div class="flex items-center gap-3 pt-1">
               <label class="text-[11px] text-slate-600 font-medium">📇 聯絡人名片：</label>
               <input type="file" id="ec${i}CardInput" accept="image/*" class="text-xs text-slate-500" onchange="handleContactCardUpload(event, ${i})">
