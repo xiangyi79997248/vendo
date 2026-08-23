@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>採購廠商與工程聯繫資料管理系統</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .tab-btn.active {
+      border-bottom: 3px solid #059669;
+      color: #059669;
+      font-weight: 600;
+    }
+    .eng-tab-btn.active {
+      background-color: #059669;
+      color: white;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+
+  <!-- 最頂部大系統切換選單 -->
+  <header class="bg-emerald-700 text-white shadow-md sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">📋</span>
+        <h1 class="text-lg font-bold tracking-wide">工程與採購聯繫管理系統</h1>
+        <span id="syncStatusBadge" class="text-[11px] bg-emerald-800 text-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-500/50 flex items-center gap-1">
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span> 雲端連線中
+        </span>
+      </div>
+      
+      <!-- 大系統切換按鈕 -->
+      <div class="flex items-center gap-2 bg-emerald-800/80 p-1 rounded-xl border border-emerald-600">
+        <button id="mainSysVendorBtn" onclick="switchSystem('vendor')" class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition bg-emerald-600 text-white shadow">
+          📋 採購廠商聯絡資料
+        </button>
+        <button id="mainSysEngBtn" onclick="switchSystem('eng')" class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition text-emerald-100 hover:text-white">
+          🏛️ 工程聯繫資料
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== 子系統 A：採購廠商聯絡方式 ==================== -->
+  <div id="sysVendorContainer" class="max-w-5xl mx-auto p-4 md:p-6 space-y-4">
+    
+    <!-- 廠商子選單 -->
+    <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-2">
+      <div class="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+        <span>🔍</span> 廠商管理專區
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="navQueryBtn" onclick="switchVendorView('query')" class="bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-800 transition flex items-center gap-1">
+          <span>🔍</span> 廠商查詢
+        </button>
+        <button id="navSiteBtn" onclick="switchVendorView('site')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 border">
+          <span>🏗️</span> 案場廠商查詢
+        </button>
+        <button id="navEditBtn" onclick="prepareCreateNewVendor()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-500 transition flex items-center gap-1">
+          <span>➕</span> 建立 / 修改廠商
+        </button>
+      </div>
+    </div>
+
+    <!-- 視圖 1：廠商條件查詢專區 -->
+    <section id="viewVendorQuery" class="space-y-4">
+      <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div class="md:col-span-2">
+            <label class="block text-xs font-semibold text-slate-600 mb-1">關鍵字搜尋 (代號/名稱/統編/電話/項目/網址/聯絡人/會計)</label>
+            <input type="text" id="queryKeyword" oninput="filterVendors()" placeholder="輸入關鍵字即時查詢..." 
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">廠商類別</label>
+            <select id="queryCategory" onchange="filterVendors()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">配合狀態</label>
+            <select id="queryStatus" onchange="filterVendors()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+              <option value="">全部狀態</option>
+              <option value="是">配合中</option>
+              <option value="否">已停止配合</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex justify-between items-center mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500">
+          <span id="resultCount">共 0 筆資料</span>
+          <div class="flex gap-2">
+            <button onclick="fetchCloudData(true)" class="text-emerald-700 hover:underline font-semibold flex items-center gap-1">
+              <span>🔄</span> 手動重新整理雲端
+            </button>
+            <span>|</span>
+            <button onclick="exportData()" class="hover:text-emerald-700 underline">匯出備份 (JSON)</button>
+            <span>|</span>
+            <label class="hover:text-emerald-700 underline cursor-pointer">
+              匯入備份 <input type="file" onchange="importData(event)" class="hidden">
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div id="queryResultGroups" class="space-y-6"></div>
+    </section>
+
+    <!-- 視圖 2：案場履歷查詢專區 -->
+    <section id="viewVendorSite" class="hidden space-y-4">
+      <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200">
+        <h2 class="text-base font-bold text-slate-800 mb-1">🏗️ 案場履歷與配合廠商反查</h2>
+        <p class="text-xs text-slate-500 mb-3">輸入案場關鍵字，自動找出該工程配合過的各工種與廠商明細。</p>
+        
+        <div class="flex gap-3">
+          <div class="flex-1">
+            <input type="text" id="siteSearchInput" oninput="renderSiteQuery()" placeholder="🔍 輸入案場名稱關鍵字..." 
+              class="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+          </div>
+          <button onclick="document.getElementById('siteSearchInput').value=''; renderSiteQuery();" class="px-3 py-2 text-xs bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 transition">清空</button>
+        </div>
+        <div class="mt-3 pt-3 border-t border-slate-100">
+          <span class="text-xs text-slate-400 mr-2">已有案場快捷選取：</span>
+          <div id="siteBadges" class="inline-flex flex-wrap gap-1.5 mt-1"></div>
+        </div>
+      </div>
+      <div id="siteResultContainer" class="space-y-4"></div>
+    </section>
+
+    <!-- 視圖 3：建立 / 修改廠商表單 -->
+    <section id="viewVendorEdit" class="hidden">
+      <div class="bg-white p-5 md:p-7 rounded-2xl shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center pb-4 mb-4 border-b border-slate-200">
+          <div>
+            <span id="formModeTag" class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">新增廠商</span>
+            <h2 id="formTitle" class="text-xl font-bold text-slate-800 mt-1">建立採購廠商資料</h2>
+          </div>
+          <button onclick="switchVendorView('query')" class="text-sm text-slate-500 hover:text-slate-800">✕ 返回查詢列表</button>
+        </div>
+
+        <form id="vendorForm" onsubmit="saveVendor(event)">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-emerald-50 p-4 rounded-xl border border-emerald-100 mb-5">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">廠商代號 *</label>
+              <input list="codeOptions" id="vCode" required onchange="handleCodeSelect(this.value)" placeholder="自動編號或選取..." 
+                class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-sm">
+              <datalist id="codeOptions"></datalist>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">廠商名稱 *</label>
+              <input type="text" id="vName" required class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">統一編號</label>
+              <input type="text" id="vTaxId" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">廠商類別</label>
+              <input list="categoryOptions" id="vCategory" placeholder="輸入或選取類別..." 
+                class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-sm">
+              <datalist id="categoryOptions"></datalist>
+            </div>
+            <div class="col-span-2 md:col-span-4">
+              <label class="block text-xs font-semibold text-slate-600 mb-1">施工項目</label>
+              <input type="text" id="vWorkItems" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-sm" placeholder="例如：水電配管、工程險...">
+            </div>
+          </div>
+
+          <div class="flex border-b border-slate-200 mb-4 text-sm overflow-x-auto">
+            <button type="button" onclick="switchSubTab('subtab-basic')" class="tab-btn active px-4 py-2 text-slate-500 whitespace-nowrap">基本資料</button>
+            <button type="button" onclick="switchSubTab('subtab-payment')" class="tab-btn px-4 py-2 text-slate-500 whitespace-nowrap">請款資訊</button>
+            <button type="button" onclick="switchSubTab('subtab-quote')" class="tab-btn px-4 py-2 text-slate-500 whitespace-nowrap">詢價內容</button>
+            <button type="button" onclick="switchSubTab('subtab-sites')" class="tab-btn px-4 py-2 text-slate-500 whitespace-nowrap">使用案場</button>
+          </div>
+
+          <!-- 分頁 1: 基本資料 -->
+          <div id="subtab-basic" class="subtab-content space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div><label class="block text-xs text-slate-600 mb-1">廠商市話</label><input type="text" id="vTel" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm"></div>
+              <div><label class="block text-xs text-slate-600 mb-1">廠商傳真</label><input type="text" id="vFax" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm"></div>
+              <div><label class="block text-xs text-slate-600 mb-1">Line ID</label><input type="text" id="vLineId" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm"></div>
+            </div>
+            <!-- 聯絡人 1~3 -->
+            <div id="vendorContactsContainer" class="space-y-3">
+              <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-2">
+                <h4 class="text-xs font-bold text-slate-700">聯絡人 (1)</h4>
+                <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
+                  <input type="text" id="c1Name" placeholder="姓名" class="border border-slate-300 rounded px-2 py-1 text-xs">
+                  <input type="text" id="c1Title" placeholder="職稱" class="border border-slate-300 rounded px-2 py-1 text-xs">
+                  <input type="text" id="c1TaxId" placeholder="統編" class="border border-slate-300 rounded px-2 py-1 text-xs">
+                  <input type="text" id="c1Mobile" placeholder="手機" class="border border-slate-300 rounded px-2 py-1 text-xs">
+                  <input type="text" id="c1Fax" placeholder="傳真" class="border border-slate-300 rounded px-2 py-1 text-xs">
+                  <input type="text" id="c1LineName" placeholder="Line 名稱" class="border border-slate-300 rounded px-2 py-1 text-xs">
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  <input type="text" id="c1Tel" placeholder="市話" class="border border-slate-300 rounded px-2 py-1 text-xs">
+                  <input type="text" id="c1Ext" placeholder="分機" class="border border-slate-300 rounded px-2 py-1 text-xs">
+                  <input type="text" id="c1Duty" placeholder="負責項目" class="border border-slate-300 rounded px-2 py-1 text-xs">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1">
+                  <input type="text" id="c1Email" placeholder="E-mail" class="w-full border border-slate-300 rounded px-2 py-1 text-xs">
+                  <input type="text" id="c1Address" placeholder="通訊地址" class="w-full border border-slate-300 rounded px-2 py-1 text-xs">
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div><label class="block text-xs font-semibold text-slate-600 mb-1">公司網址</label><input type="text" id="vWebsite" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm"></div>
+              <div><label class="block text-xs font-semibold text-slate-600 mb-1">取貨地址</label><input type="text" id="vPickupAddress" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm"></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">名片圖檔 (點擊放大 🔍)</label>
+                <div class="border border-dashed border-slate-300 rounded-lg p-3 text-center bg-slate-50">
+                  <input type="file" id="vCardInput" accept="image/*" class="text-xs mb-2" onchange="handleCardUpload(event, 'vendor')">
+                  <div class="relative cursor-pointer" onclick="openLightbox(currentVendorCardBase64)">
+                    <img id="vCardPreview" class="max-h-36 rounded shadow-sm hidden border mx-auto" alt="名片預覽">
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="mb-2">
+                  <span class="text-xs font-semibold text-slate-600 mr-2">是否還在配合：</span>
+                  <label class="text-sm mr-4"><input type="radio" name="vActive" value="是" checked> 是</label>
+                  <label class="text-sm"><input type="radio" name="vActive" value="否"> 否</label>
+                </div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">備註說明</label>
+                <textarea id="vRemark" rows="4" class="w-full border border-slate-300 rounded p-2 text-sm"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- 分頁 2: 請款資訊 -->
+          <div id="subtab-payment" class="subtab-content hidden space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div><label class="block text-xs text-slate-600 mb-1">負責人</label><input type="text" id="pOwner" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm"></div>
+              <div><label class="block text-xs text-slate-600 mb-1">請款銀行代號</label><input type="text" id="pBankCode" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm"></div>
+              <div><label class="block text-xs text-slate-600 mb-1">請款銀行名稱</label><input type="text" id="pBankName" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div><label class="block text-xs text-slate-600 mb-1">請款戶名</label><input type="text" id="pAccountName" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm"></div>
+              <div><label class="block text-xs text-slate-600 mb-1">請款帳號</label><input type="text" id="pAccountNumber" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm"></div>
+            </div>
+            <div><label class="block text-xs text-slate-600 mb-1">營業地址</label><input type="text" id="pBizAddress" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm"></div>
+            <div><label class="block text-xs text-slate-600 mb-1">發票地址</label><input type="text" id="pInvoiceAddress" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm"></div>
+          </div>
+
+          <!-- 分頁 3: 詢價內容 -->
+          <div id="subtab-quote" class="subtab-content hidden">
+            <label class="block text-xs text-slate-600 mb-1">詢價與單價歷史紀錄</label>
+            <textarea id="vQuotes" rows="10" class="w-full border border-slate-300 rounded p-3 text-sm font-mono"></textarea>
+          </div>
+
+          <!-- 分頁 4: 使用案場 -->
+          <div id="subtab-sites" class="subtab-content hidden">
+            <label class="block text-xs text-slate-600 mb-1">曾承作之案場紀錄 (一行一個案場)</label>
+            <textarea id="vSites" rows="10" class="w-full border border-slate-300 rounded p-3 text-sm font-mono"></textarea>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-slate-200 flex justify-between items-center">
+            <button type="button" id="deleteVendorBtn" onclick="deleteCurrentVendor()" class="text-red-500 hover:text-red-700 text-sm hidden font-medium">刪除此廠商</button>
+            <div class="ml-auto flex gap-3">
+              <button type="button" onclick="switchVendorView('query')" class="px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50">返回清單</button>
+              <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2 rounded-lg text-sm shadow">確認儲存</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+  </div>
+
+
+  <!-- ==================== 子系統 B：工程聯繫資料 ==================== -->
+  <div id="sysEngContainer" class="max-w-5xl mx-auto p-4 md:p-6 space-y-4 hidden">
+    
+    <!-- 分類 Tab 按鈕列與建立按鈕 -->
+    <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-3">
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button id="engTab_主辦機關" onclick="switchEngCategory('主辦機關')" class="eng-tab-btn active px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-100 text-slate-700">主辦機關</button>
+        <button id="engTab_監造單位" onclick="switchEngCategory('監造單位')" class="eng-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-100 text-slate-700">監造單位</button>
+        <button id="engTab_公家機關" onclick="switchEngCategory('公家機關')" class="eng-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-100 text-slate-700">公家機關</button>
+        <button id="engTab_實驗室" onclick="switchEngCategory('實驗室')" class="eng-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-100 text-slate-700">實驗室</button>
+      </div>
+      <button onclick="prepareCreateNewEng()" class="bg-emerald-600 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-500 transition flex items-center gap-1">
+        <span>➕</span> 建立 / 修改資料
+      </button>
+    </div>
+
+    <!-- 工程查詢視圖 -->
+    <section id="viewEngQuery" class="space-y-4">
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+        <input type="text" id="engSearchInput" oninput="renderEngList()" placeholder="🔍 搜尋單位名稱、聯絡人、工程或電話..." 
+          class="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+      </div>
+      <div id="engResultContainer" class="space-y-4"></div>
+    </section>
+
+    <!-- 工程建立/修改表單視圖 -->
+    <section id="viewEngEdit" class="hidden">
+      <div class="bg-white p-5 md:p-7 rounded-2xl shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center pb-4 mb-4 border-b border-slate-200">
+          <div>
+            <span id="engFormModeTag" class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">新增工程聯繫</span>
+            <h2 id="engFormTitle" class="text-xl font-bold text-slate-800 mt-1">建立工程聯繫資料</h2>
+          </div>
+          <button onclick="switchEngView('query')" class="text-sm text-slate-500 hover:text-slate-800">✕ 返回列表</button>
+        </div>
+
+        <form id="engForm" onsubmit="saveEngineering(event)" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">所屬分類 *</label>
+              <select id="eCategory" required class="w-full border border-slate-300 rounded px-3 py-2 text-sm bg-white">
+                <option value="主辦機關">主辦機關</option>
+                <option value="監造單位">監造單位</option>
+                <option value="公家機關">公家機關</option>
+                <option value="實驗室">實驗室</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">單位 / 公司名稱 *</label>
+              <input type="text" id="eName" required class="w-full border border-slate-300 rounded px-3 py-2 text-sm" placeholder="例如：中西區區公所">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">電話</label>
+              <input type="text" id="eTel" class="w-full border border-slate-300 rounded px-3 py-2 text-sm" placeholder="例如：06-2267151">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">分機 / 手機</label>
+              <input type="text" id="eExtOrMobile" class="w-full border border-slate-300 rounded px-3 py-2 text-sm" placeholder="例如：#355 或 0919...">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">聯絡人</label>
+              <input type="text" id="eContactPerson" class="w-full border border-slate-300 rounded px-3 py-2 text-sm" placeholder="例如：賴志強">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">地址</label>
+              <input type="text" id="eAddress" class="w-full border border-slate-300 rounded px-3 py-2 text-sm" placeholder="例如：700台南市中西區開山路1號">
+            </div>
+          </div>
+
+          <!-- 使用單位相關資訊 (區塊) -->
+          <div class="bg-emerald-50/60 p-4 rounded-xl border border-emerald-200 space-y-3">
+            <h4 class="text-xs font-bold text-emerald-800">🏢 使用單位相關資訊 (填寫)</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div><input type="text" id="eUseUnitName" placeholder="使用單位名稱 (如: 民主社區活動中心)" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm"></div>
+              <div><input type="text" id="eUseUnitTel" placeholder="使用單位電話" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm"></div>
+              <div><input type="text" id="eUseUnitContact" placeholder="使用單位聯絡人" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm"></div>
+              <div><input type="text" id="eUseUnitAddress" placeholder="使用單位地址" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm"></div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">工程名稱 (案場名稱) *</label>
+            <input type="text" id="eProjectName" required class="w-full border border-slate-300 rounded px-3 py-2 text-sm" placeholder="例如：臺南市中西區民主社區活動中心耐震補強工程">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">備註說明</label>
+            <textarea id="eRemark" rows="3" class="w-full border border-slate-300 rounded p-2 text-sm" placeholder="填寫其他注意事項..."></textarea>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">名片圖檔 (點擊放大 🔍)</label>
+            <div class="border border-dashed border-slate-300 rounded-lg p-3 text-center bg-slate-50">
+              <input type="file" id="eCardInput" accept="image/*" class="text-xs mb-2" onchange="handleCardUpload(event, 'eng')">
+              <div class="relative cursor-pointer" onclick="openLightbox(currentEngCardBase64)">
+                <img id="eCardPreview" class="max-h-36 rounded shadow-sm hidden border mx-auto" alt="名片預覽">
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t flex justify-between items-center">
+            <button type="button" id="deleteEngBtn" onclick="deleteCurrentEngineering()" class="text-red-500 hover:text-red-700 text-sm hidden font-medium">刪除此筆資料</button>
+            <div class="ml-auto flex gap-3">
+              <button type="button" onclick="switchEngView('query')" class="px-4 py-2 border rounded-lg text-sm text-slate-600 hover:bg-slate-50">返回</button>
+              <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2 rounded-lg text-sm shadow">確認儲存</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <!-- 名片燈箱 Modal -->
+  <div id="imageLightbox" onclick="closeLightbox()" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
+      <button onclick="closeLightbox()" class="absolute -top-10 right-0 text-white text-2xl font-bold bg-black/50 rounded-full w-8 h-8 flex items-center justify-center">✕</button>
+      <img id="lightboxImg" src="" class="max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain bg-white" onclick="event.stopPropagation()">
+    </div>
+  </div>
+
+  <script>
+    // 雲端 Apps Script API 網址
+    const CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbzO1CCOTViR-jxIaGdeXsJmHU_urcXMljRLvIJ21hC-XjTPatNuyNVTELIYXxSY6Cvi/exec";
+
+    // 兩種資料狀態 (存放在同一個 JSON 結構中雙向同步)
+    let appData = JSON.parse(localStorage.getItem('combined_system_data')) || { vendors: [], engineering: [] };
+    if (Array.isArray(appData)) {
+      appData = { vendors: appData, engineering: [] }; // 相容舊版資料格式
+    }
+
+    let currentVendorEditId = null;
+    let currentVendorCardBase64 = "";
+
+    let currentEngEditId = null;
+    let currentEngCardBase64 = "";
+    let activeEngCategory = "主辦機關";
+
+    function updateBadge(status, text) {
+      const badge = document.getElementById('syncStatusBadge');
+      if (!badge) return;
+      if (status === 'syncing') {
+        badge.className = "text-[11px] bg-amber-800 text-amber-100 px-2.5 py-0.5 rounded-full border border-amber-500/50 flex items-center gap-1";
+        badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-amber-300 animate-ping"></span> ${text}`;
+      } else if (status === 'online') {
+        badge.className = "text-[11px] bg-emerald-800 text-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-500/50 flex items-center gap-1";
+        badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-300"></span> ${text}`;
+      } else if (status === 'error') {
+        badge.className = "text-[11px] bg-rose-800 text-rose-100 px-2.5 py-0.5 rounded-full border border-rose-500/50 flex items-center gap-1";
+        badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-rose-300"></span> ${text}`;
+      }
+    }
+
+    async function fetchCloudData(isManual = false) {
+      updateBadge('syncing', '雲端同步中...');
+      try {
+        const response = await fetch(CLOUD_API_URL + '?t=' + Date.now(), { method: 'GET' });
+        const text = await response.text();
+        if (text && text !== "[]") {
+          const cloudParsed = JSON.parse(text);
+          if (Array.isArray(cloudParsed)) {
+            appData = { vendors: cloudParsed, engineering: [] };
+          } else if (cloudParsed && typeof cloudParsed === 'object') {
+            appData = {
+              vendors: Array.isArray(cloudParsed.vendors) ? cloudParsed.vendors : [],
+              engineering: Array.isArray(cloudParsed.engineering) ? cloudParsed.engineering : []
+            };
+          }
+          localStorage.setItem('combined_system_data', JSON.stringify(appData));
+          refreshCategoryOptions();
+          refreshCodeOptions();
+          filterVendors();
+          renderSiteQuery();
+          renderEngList();
+          updateBadge('online', '雲端已同步');
+          if (isManual) alert(`同步成功！共有廠商 ${appData.vendors.length} 筆、工程聯繫 ${appData.engineering.length} 筆。`);
+          return;
+        }
+        syncToCloud();
+        updateBadge('online', '已初始化雲端');
+      } catch (err) {
+        updateBadge('error', '離線暫存模式');
+        if (isManual) alert('雲端連線失敗，目前顯示本機快取。');
+      }
+    }
+
+    async function syncToCloud() {
+      updateBadge('syncing', '正在儲存至雲端...');
+      try {
+        await fetch(CLOUD_API_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(appData)
+        });
+        updateBadge('online', '雲端已儲存');
+      } catch (err) {
+        updateBadge('error', '雲端儲存失敗(已存本機)');
+      }
+    }
+
+    function switchSystem(sys) {
+      document.getElementById('sysVendorContainer').classList.add('hidden');
+      document.getElementById('sysEngContainer').classList.add('hidden');
+      document.getElementById('mainSysVendorBtn').className = "px-3.5 py-1.5 rounded-lg text-sm font-semibold transition text-emerald-100 hover:text-white";
+      document.getElementById('mainSysEngBtn').className = "px-3.5 py-1.5 rounded-lg text-sm font-semibold transition text-emerald-100 hover:text-white";
+
+      if (sys === 'vendor') {
+        document.getElementById('sysVendorContainer').classList.remove('hidden');
+        document.getElementById('mainSysVendorBtn').className = "px-3.5 py-1.5 rounded-lg text-sm font-semibold transition bg-emerald-600 text-white shadow";
+        filterVendors();
+      } else {
+        document.getElementById('sysEngContainer').classList.remove('hidden');
+        document.getElementById('mainSysEngBtn').className = "px-3.5 py-1.5 rounded-lg text-sm font-semibold transition bg-emerald-600 text-white shadow";
+        renderEngList();
+      }
+    }
+
+    function switchVendorView(view) {
+      document.getElementById('viewVendorQuery').classList.add('hidden');
+      document.getElementById('viewVendorSite').classList.add('hidden');
+      document.getElementById('viewVendorEdit').classList.add('hidden');
+
+      document.getElementById('navQueryBtn').className = "bg-slate-100 text-slate-700 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition border";
+      document.getElementById('navSiteBtn').className = "bg-slate-100 text-slate-700 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition border";
+      document.getElementById('navEditBtn').className = "bg-slate-100 text-slate-700 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition border";
+
+      if (view === 'query') {
+        document.getElementById('viewVendorQuery').classList.remove('hidden');
+        document.getElementById('navQueryBtn').className = "bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-800 transition";
+        filterVendors();
+      } else if (view === 'site') {
+        document.getElementById('viewVendorSite').classList.remove('hidden');
+        document.getElementById('navSiteBtn').className = "bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-800 transition";
+        renderSiteQuery();
+      } else {
+        document.getElementById('viewVendorEdit').classList.remove('hidden');
+        document.getElementById('navEditBtn').className = "bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-800 transition";
+      }
+    }
+
+    function switchEngCategory(cat) {
+      activeEngCategory = cat;
+      ['主辦機關', '監造單位', '公家機關', '實驗室'].forEach(c => {
+        const btn = document.getElementById(`engTab_${c}`);
+        if (btn) btn.className = "eng-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-100 text-slate-700";
+      });
+      const activeBtn = document.getElementById(`engTab_${cat}`);
+      if (activeBtn) activeBtn.className = "eng-tab-btn active px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-emerald-600 text-white shadow";
+      renderEngList();
+    }
+
+    function switchEngView(view) {
+      document.getElementById('viewEngQuery').classList.add('hidden');
+      document.getElementById('viewEngEdit').classList.add('hidden');
+      if (view === 'query') {
+        document.getElementById('viewEngQuery').classList.remove('hidden');
+        renderEngList();
+      } else {
+        document.getElementById('viewEngEdit').classList.remove('hidden');
+      }
+    }
+
+    function openLightbox(imgSrc) {
+      if (!imgSrc) return;
+      document.getElementById('lightboxImg').src = imgSrc;
+      document.getElementById('imageLightbox').classList.remove('hidden');
+    }
+    function closeLightbox() {
+      document.getElementById('imageLightbox').classList.add('hidden');
+      document.getElementById('lightboxImg').src = "";
+    }
+
+    function handleCardUpload(event, type) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          let w = img.width, h = img.height;
+          const maxDim = 900;
+          if (w > h && w > maxDim) { h *= maxDim / w; w = maxDim; }
+          else if (h >= w && h > maxDim) { w *= maxDim / h; h = maxDim; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const base64 = canvas.toDataURL('image/jpeg', 0.75);
+
+          if (type === 'vendor') {
+            currentVendorCardBase64 = base64;
+            const prev = document.getElementById('vCardPreview');
+            prev.src = base64; prev.classList.remove('hidden');
+          } else {
+            currentEngCardBase64 = base64;
+            const prev = document.getElementById('eCardPreview');
+            prev.src = base64; prev.classList.remove('hidden');
+          }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ==================== 廠商邏輯 ====================
+    function getNextVendorCode() {
+      if (appData.vendors.length === 0) return '001';
+      let maxNum = 0;
+      appData.vendors.forEach(v => {
+        const num = parseInt(v.code, 10);
+        if (!isNaN(num) && num > maxNum) maxNum = num;
+      });
+      const next = maxNum + 1;
+      return next < 100 ? String(next).padStart(3, '0') : String(next);
+    }
+
+    function refreshCodeOptions() {
+      const dl = document.getElementById('codeOptions');
+      if (dl) dl.innerHTML = appData.vendors.filter(v => v.code).map(v => `<option value="${v.code}">${v.name || ''}</option>`).join('');
+    }
+    function handleCodeSelect(code) {
+      const matched = appData.vendors.find(v => v.code === code.trim());
+      if (matched && matched.id !== currentVendorEditId) loadVendorToEdit(matched.id);
+    }
+    function refreshCategoryOptions() {
+      const cats = Array.from(new Set(appData.vendors.map(v => v.category?.trim()).filter(Boolean)));
+      const dl = document.getElementById('categoryOptions');
+      if (dl) dl.innerHTML = cats.map(c => `<option value="${c}">`).join('');
+      const sel = document.getElementById('queryCategory');
+      if (sel) {
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">全部類別</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        sel.value = cur;
+      }
+    }
+
+    function prepareCreateNewVendor() {
+      currentVendorEditId = null;
+      currentVendorCardBase64 = "";
+      document.getElementById('vendorForm').reset();
+      document.getElementById('vCode').value = getNextVendorCode();
+      document.getElementById('formModeTag').innerText = "新增廠商";
+      document.getElementById('formTitle').innerText = "建立採購廠商資料";
+      document.getElementById('deleteVendorBtn').classList.add('hidden');
+      document.getElementById('vCardPreview').classList.add('hidden');
+      refreshCodeOptions();
+      refreshCategoryOptions();
+      switchSubTab('subtab-basic');
+      switchVendorView('edit');
+    }
+
+    function switchSubTab(tabId) {
+      document.querySelectorAll('.subtab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.remove('hidden');
+      const btn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
+      if (btn) btn.classList.add('active');
+    }
+
+    function saveVendor(e) {
+      e.preventDefault();
+      const code = document.getElementById('vCode').value.trim();
+      const name = document.getElementById('vName').value.trim();
+      if (!code || !name) { alert('代號與名稱為必填'); return; }
+
+      const vData = {
+        id: currentVendorEditId || Date.now().toString(),
+        code, name,
+        taxId: document.getElementById('vTaxId').value.trim(),
+        category: document.getElementById('vCategory').value.trim(),
+        workItems: document.getElementById('vWorkItems').value.trim(),
+        tel: document.getElementById('vTel').value.trim(),
+        fax: document.getElementById('vFax').value.trim(),
+        lineId: document.getElementById('vLineId').value.trim(),
+        c1: {
+          name: document.getElementById('c1Name').value.trim(),
+          title: document.getElementById('c1Title').value.trim(),
+          taxId: document.getElementById('c1TaxId').value.trim(),
+          mobile: document.getElementById('c1Mobile').value.trim(),
+          fax: document.getElementById('c1Fax').value.trim(),
+          tel: document.getElementById('c1Tel').value.trim(),
+          ext: document.getElementById('c1Ext').value.trim(),
+          lineName: document.getElementById('c1LineName').value.trim(),
+          email: document.getElementById('c1Email').value.trim(),
+          address: document.getElementById('c1Address').value.trim(),
+          duty: document.getElementById('c1Duty').value.trim(),
+        },
+        website: document.getElementById('vWebsite').value.trim(),
+        pickupAddress: document.getElementById('vPickupAddress').value.trim(),
+        cardImg: currentVendorCardBase64,
+        isActive: document.querySelector('input[name="vActive"]:checked').value,
+        remark: document.getElementById('vRemark').value.trim(),
+        payment: {
+          owner: document.getElementById('pOwner').value.trim(),
+          bankCode: document.getElementById('pBankCode').value.trim(),
+          bankName: document.getElementById('pBankName').value.trim(),
+          accountName: document.getElementById('pAccountName').value.trim(),
+          accountNumber: document.getElementById('pAccountNumber').value.trim(),
+          bizAddress: document.getElementById('pBizAddress').value.trim(),
+          invoiceAddress: document.getElementById('pInvoiceAddress').value.trim(),
+        },
+        quotes: document.getElementById('vQuotes').value.trim(),
+        sites: document.getElementById('vSites').value.trim(),
+      };
+
+      if (currentVendorEditId) {
+        const idx = appData.vendors.findIndex(v => v.id === currentVendorEditId);
+        if (idx !== -1) appData.vendors[idx] = vData;
+      } else {
+        appData.vendors.unshift(vData);
+      }
+
+      localStorage.setItem('combined_system_data', JSON.stringify(appData));
+      syncToCloud();
+      refreshCategoryOptions();
+      refreshCodeOptions();
+      alert('廠商資料儲存成功！');
+      switchVendorView('query');
+    }
+
+    function loadVendorToEdit(id) {
+      const v = appData.vendors.find(item => item.id === id);
+      if (!v) return;
+      currentVendorEditId = v.id;
+      document.getElementById('formModeTag').innerText = "修改廠商";
+      document.getElementById('formTitle').innerText = `修改廠商：${v.name}`;
+      document.getElementById('deleteVendorBtn').classList.remove('hidden');
+
+      document.getElementById('vCode').value = v.code || '';
+      document.getElementById('vName').value = v.name || '';
+      document.getElementById('vTaxId').value = v.taxId || '';
+      document.getElementById('vCategory').value = v.category || '';
+      document.getElementById('vWorkItems').value = v.workItems || '';
+      document.getElementById('vTel').value = v.tel || '';
+      document.getElementById('vFax').value = v.fax || '';
+      document.getElementById('vLineId').value = v.lineId || '';
+
+      document.getElementById('c1Name').value = v.c1?.name || '';
+      document.getElementById('c1Title').value = v.c1?.title || '';
+      document.getElementById('c1TaxId').value = v.c1?.taxId || '';
+      document.getElementById('c1Mobile').value = v.c1?.mobile || '';
+      document.getElementById('c1Fax').value = v.c1?.fax || '';
+      document.getElementById('c1Tel').value = v.c1?.tel || '';
+      document.getElementById('c1Ext').value = v.c1?.ext || '';
+      document.getElementById('c1LineName').value = v.c1?.lineName || '';
+      document.getElementById('c1Email').value = v.c1?.email || '';
+      document.getElementById('c1Address').value = v.c1?.address || '';
+      document.getElementById('c1Duty').value = v.c1?.duty || '';
+
+      document.getElementById('vWebsite').value = v.website || '';
+      document.getElementById('vPickupAddress').value = v.pickupAddress || '';
+
+      currentVendorCardBase64 = v.cardImg || "";
+      const img = document.getElementById('vCardPreview');
+      if (currentVendorCardBase64) { img.src = currentVendorCardBase64; img.classList.remove('hidden'); }
+      else { img.classList.add('hidden'); }
+
+      document.querySelectorAll('input[name="vActive"]').forEach(r => r.checked = (r.value === (v.isActive || '是')));
+      document.getElementById('vRemark').value = v.remark || '';
+      document.getElementById('pOwner').value = v.payment?.owner || '';
+      document.getElementById('pBankCode').value = v.payment?.bankCode || '';
+      document.getElementById('pBankName').value = v.payment?.bankName || '';
+      document.getElementById('pAccountName').value = v.payment?.accountName || '';
+      document.getElementById('pAccountNumber').value = v.payment?.accountNumber || '';
+      document.getElementById('pBizAddress').value = v.payment?.bizAddress || '';
+      document.getElementById('pInvoiceAddress').value = v.payment?.invoiceAddress || '';
+      document.getElementById('vQuotes').value = v.quotes || '';
+      document.getElementById('vSites').value = v.sites || '';
+
+      switchSubTab('subtab-basic');
+      switchVendorView('edit');
+    }
+
+    function deleteCurrentVendor() {
+      if (!currentVendorEditId) return;
+      if (confirm('確定刪除此廠商？')) {
+        appData.vendors = appData.vendors.filter(v => v.id !== currentVendorEditId);
+        localStorage.setItem('combined_system_data', JSON.stringify(appData));
+        syncToCloud();
+        alert('已刪除');
+        switchVendorView('query');
+      }
+    }
+
+    function filterVendors() {
+      const kw = document.getElementById('queryKeyword').value.toLowerCase();
+      const cat = document.getElementById('queryCategory').value;
+      const st = document.getElementById('queryStatus').value;
+
+      const filtered = appData.vendors.filter(v => {
+        const matchKw = !kw || [v.name, v.code, v.taxId, v.workItems, v.tel].some(x => x && x.toLowerCase().includes(kw));
+        const matchCat = !cat || v.category === cat;
+        const matchSt = !st || v.isActive === st;
+        return matchKw && matchCat && matchSt;
+      });
+
+      document.getElementById('resultCount').innerText = `共 ${filtered.length} 筆資料`;
+      const container = document.getElementById('queryResultGroups');
+      container.innerHTML = '';
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="bg-white p-10 text-center text-slate-400 rounded-2xl border">查無相符廠商資料</div>';
+        return;
+      }
+
+      const grouped = {};
+      filtered.forEach(v => {
+        const c = v.category?.trim() || '未分類';
+        if (!grouped[c]) grouped[c] = [];
+        grouped[c].push(v);
+      });
+
+      Object.keys(grouped).forEach(cName => {
+        const list = grouped[cName];
+        const sec = document.createElement('div');
+        sec.className = "bg-white p-5 rounded-2xl border shadow-sm space-y-3";
+        sec.innerHTML = `<h3 class="font-bold text-slate-800 text-base border-b pb-2">${cName} (${list.length}家)</h3>`;
+        const grid = document.createElement('div');
+        grid.className = "grid grid-cols-1 md:grid-cols-2 gap-3";
+
+        list.forEach(v => {
+          const card = document.createElement('div');
+          card.className = "bg-slate-50 p-3.5 rounded-xl border flex flex-col justify-between";
+          card.innerHTML = `
+            <div>
+              <div class="flex justify-between items-start">
+                <span class="text-xs bg-white px-2 py-0.5 rounded font-mono border">${v.code || ''}</span>
+                <span class="text-xs ${v.isActive === '是' ? 'text-emerald-600 bg-emerald-100' : 'text-rose-500 bg-rose-100'} px-2 py-0.5 rounded font-bold">${v.isActive === '是' ? '● 配合中' : '✕ 已停止'}</span>
+              </div>
+              <h4 class="font-bold text-slate-800 mt-2">${v.name}</h4>
+              <p class="text-xs text-slate-600 mt-1">施工項目：${v.workItems || '未填寫'}</p>
+              ${v.tel ? `<p class="text-xs text-slate-600 mt-1">📞 市話：<a href="tel:${v.tel}" class="text-emerald-600 font-medium">${v.tel}</a></p>` : ''}
+            </div>
+            <div class="mt-3 pt-2 border-t flex justify-between items-center">
+              ${v.cardImg ? `<button onclick="openLightbox('${v.cardImg}')" class="text-xs text-emerald-600 underline">📇 名片</button>` : '<span></span>'}
+              <button onclick="loadVendorToEdit('${v.id}')" class="bg-slate-800 text-white text-xs px-3 py-1 rounded">✏️ 編輯</button>
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+        sec.appendChild(grid);
+        container.appendChild(sec);
+      });
+    }
+
+    function renderSiteQuery() {
+      const kw = (document.getElementById('siteSearchInput')?.value || '').trim().toLowerCase();
+      const container = document.getElementById('siteResultContainer');
+      const badgesContainer = document.getElementById('siteBadges');
+      container.innerHTML = ''; badgesContainer.innerHTML = '';
+
+      const siteMap = {};
+      appData.vendors.forEach(v => {
+        if (!v.sites) return;
+        v.sites.split('\n').forEach(line => {
+          let clean = line.trim();
+          if (!clean) return;
+          let title = clean.replace(/^[\d\.\\(\)\\s\-]+/, '').trim();
+          if (!siteMap[clean]) siteMap[clean] = { title, vendors: [] };
+          siteMap[clean].vendors.push(v);
+        });
+      });
+
+      Object.keys(siteMap).slice(0, 10).forEach(key => {
+        const item = siteMap[key];
+        const b = document.createElement('button');
+        b.className = "text-xs bg-slate-100 hover:bg-emerald-100 text-slate-700 px-2.5 py-1 rounded-full border";
+        b.innerText = item.title;
+        b.onclick = () => { document.getElementById('siteSearchInput').value = item.title; renderSiteQuery(); };
+        badgesContainer.appendChild(b);
+      });
+
+      const matched = Object.keys(siteMap).filter(k => !kw || k.toLowerCase().includes(kw));
+      if (matched.length === 0) {
+        container.innerHTML = '<div class="bg-white p-10 text-center text-slate-400 rounded-2xl border">查無相符案場紀錄</div>';
+        return;
+      }
+
+      matched.forEach(k => {
+        const data = siteMap[k];
+        const card = document.createElement('div');
+        card.className = "bg-white p-4 rounded-xl border shadow-sm space-y-3";
+        card.innerHTML = `<h3 class="font-bold text-slate-800 border-b pb-2">📍 ${data.title} (${data.vendors.length}家廠商)</h3>`;
+        const g = document.createElement('div');
+        g.className = "grid grid-cols-1 md:grid-cols-2 gap-3";
+        data.vendors.forEach(v => {
+          g.innerHTML += `<div class="bg-slate-50 p-3 rounded border text-xs"><b class="text-slate-800 text-sm">${v.name}</b><p class="text-slate-500 mt-1">項目：${v.workItems || '-'}</p></div>`;
+        });
+        card.appendChild(g);
+        container.appendChild(card);
+      });
+    }
+
+
+    // ==================== 工程聯繫資料邏輯 ====================
+    function prepareCreateNewEng() {
+      currentEngEditId = null;
+      currentEngCardBase64 = "";
+      document.getElementById('engForm').reset();
+      document.getElementById('eCategory').value = activeEngCategory;
+      document.getElementById('engFormModeTag').innerText = "新增工程聯繫";
+      document.getElementById('engFormTitle').innerText = "建立工程聯繫資料";
+      document.getElementById('deleteEngBtn').classList.add('hidden');
+      document.getElementById('eCardPreview').classList.add('hidden');
+      switchEngView('edit');
+    }
+
+    function saveEngineering(e) {
+      e.preventDefault();
+      const category = document.getElementById('eCategory').value;
+      const name = document.getElementById('eName').value.trim();
+      const projectName = document.getElementById('eProjectName').value.trim();
+      if (!name || !projectName) { alert('單位名稱與工程名稱為必填'); return; }
+
+      const eData = {
+        id: currentEngEditId || Date.now().toString(),
+        category, name,
+        tel: document.getElementById('eTel').value.trim(),
+        extOrMobile: document.getElementById('eExtOrMobile').value.trim(),
+        contactPerson: document.getElementById('eContactPerson').value.trim(),
+        address: document.getElementById('eAddress').value.trim(),
+        useUnitName: document.getElementById('eUseUnitName').value.trim(),
+        useUnitTel: document.getElementById('eUseUnitTel').value.trim(),
+        useUnitContact: document.getElementById('eUseUnitContact').value.trim(),
+        useUnitAddress: document.getElementById('eUseUnitAddress').value.trim(),
+        projectName,
+        remark: document.getElementById('eRemark').value.trim(),
+        cardImg: currentEngCardBase64
+      };
+
+      if (!appData.engineering) appData.engineering = [];
+      if (currentEngEditId) {
+        const idx = appData.engineering.findIndex(item => item.id === currentEngEditId);
+        if (idx !== -1) appData.engineering[idx] = eData;
+      } else {
+        appData.engineering.unshift(eData);
+      }
+
+      localStorage.setItem('combined_system_data', JSON.stringify(appData));
+      syncToCloud();
+      alert('工程聯繫資料儲存成功！');
+      switchEngCategory(category);
+      switchEngView('query');
+    }
+
+    function loadEngineeringToEdit(id) {
+      const item = (appData.engineering || []).find(x => x.id === id);
+      if (!item) return;
+      currentEngEditId = item.id;
+      document.getElementById('engFormModeTag').innerText = "修改工程聯繫";
+      document.getElementById('engFormTitle').innerText = `修改：${item.name}`;
+      document.getElementById('deleteEngBtn').classList.remove('hidden');
+
+      document.getElementById('eCategory').value = item.category || '主辦機關';
+      document.getElementById('eName').value = item.name || '';
+      document.getElementById('eTel').value = item.tel || '';
+      document.getElementById('eExtOrMobile').value = item.extOrMobile || '';
+      document.getElementById('eContactPerson').value = item.contactPerson || '';
+      document.getElementById('eAddress').value = item.address || '';
+      document.getElementById('eUseUnitName').value = item.useUnitName || '';
+      document.getElementById('eUseUnitTel').value = item.useUnitTel || '';
+      document.getElementById('eUseUnitContact').value = item.useUnitContact || '';
+      document.getElementById('eUseUnitAddress').value = item.useUnitAddress || '';
+      document.getElementById('eProjectName').value = item.projectName || '';
+      document.getElementById('eRemark').value = item.remark || '';
+
+      currentEngCardBase64 = item.cardImg || "";
+      const prev = document.getElementById('eCardPreview');
+      if (currentEngCardBase64) { prev.src = currentEngCardBase64; prev.classList.remove('hidden'); }
+      else { prev.classList.add('hidden'); }
+
+      switchEngView('edit');
+    }
+
+    function deleteCurrentEngineering() {
+      if (!currentEngEditId) return;
+      if (confirm('確定刪除此筆工程聯繫資料？')) {
+        appData.engineering = appData.engineering.filter(x => x.id !== currentEngEditId);
+        localStorage.setItem('combined_system_data', JSON.stringify(appData));
+        syncToCloud();
+        alert('已刪除');
+        switchEngView('query');
+      }
+    }
+
+    function renderEngList() {
+      const kw = (document.getElementById('engSearchInput')?.value || '').trim().toLowerCase();
+      const container = document.getElementById('engResultContainer');
+      container.innerHTML = '';
+
+      const list = (appData.engineering || []).filter(item => {
+        const matchCat = item.category === activeEngCategory;
+        const matchKw = !kw || [item.name, item.projectName, item.contactPerson, item.tel].some(x => x && x.toLowerCase().includes(kw));
+        return matchCat && matchKw;
+      });
+
+      if (list.length === 0) {
+        container.innerHTML = `<div class="bg-white p-12 text-center text-slate-400 rounded-2xl border shadow-sm">尚無「${activeEngCategory}」相關的工程聯繫資料</div>`;
+        return;
+      }
+
+      // 依工程案場群組呈現
+      const grouped = {};
+      list.forEach(item => {
+        const proj = item.projectName || '未命名工程';
+        if (!grouped[proj]) grouped[proj] = [];
+        grouped[proj].push(item);
+      });
+
+      Object.keys(grouped).forEach(projName => {
+        const items = grouped[projName];
+        const card = document.createElement('div');
+        card.className = "bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3";
+        card.innerHTML = `
+          <div class="flex justify-between items-center pb-2 border-b">
+            <h3 class="font-bold text-slate-800 text-base">🏗️ 工程案場：${projName}</h3>
+            <span class="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">${items.length} 個單位</span>
+          </div>
+        `;
+
+        items.forEach(it => {
+          const inner = document.createElement('div');
+          inner.className = "bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-2 relative";
+          inner.innerHTML = `
+            <div class="flex justify-between items-start">
+              <h4 class="font-bold text-base text-slate-800">${it.name}</h4>
+              <button onclick="loadEngineeringToEdit('${it.id}')" class="bg-slate-800 hover:bg-slate-900 text-white text-xs px-3 py-1 rounded-lg">✏️ 編輯</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-1 text-xs text-slate-600">
+              ${it.tel ? `<p>📞 電話：<a href="tel:${it.tel}" class="text-emerald-600 font-medium">${it.tel}</a> ${it.extOrMobile || ''}</p>` : ''}
+              ${it.contactPerson ? `<p>👤 聯絡人：${it.contactPerson}</p>` : ''}
+              ${it.address ? `<p class="md:col-span-2">📍 地址：${it.address}</p>` : ''}
+            </div>
+            ${it.useUnitName ? `
+              <div class="mt-2 bg-white p-2.5 rounded-lg border border-emerald-100 text-xs text-slate-600 space-y-1">
+                <p class="font-semibold text-emerald-800 flex items-center gap-1"><span>🏢</span> 使用單位：${it.useUnitName}</p>
+                ${it.useUnitTel ? `<p>電話：${it.useUnitTel}</p>` : ''}
+                ${it.useUnitContact ? `<p>聯絡人：${it.useUnitContact}</p>` : ''}
+                ${it.useUnitAddress ? `<p>地址：${it.useUnitAddress}</p>` : ''}
+              </div>
+            ` : ''}
+            ${it.cardImg ? `<div class="pt-1"><button onclick="openLightbox('${it.cardImg}')" class="text-xs text-emerald-600 underline">📇 查看名片</button></div>` : ''}
+          `;
+          card.appendChild(inner);
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    function exportData() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+      const a = document.createElement('a');
+      a.href = dataStr;
+      a.download = `採購與工程系統備份_${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    function importData(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const imported = JSON.parse(evt.target.result);
+          if (Array.isArray(imported)) {
+            appData = { vendors: imported, engineering: [] };
+          } else {
+            appData = {
+              vendors: Array.isArray(imported.vendors) ? imported.vendors : [],
+              engineering: Array.isArray(imported.engineering) ? imported.engineering : []
+            };
+          }
+          localStorage.setItem('combined_system_data', JSON.stringify(appData));
+          syncToCloud();
+          filterVendors();
+          renderEngList();
+          alert('成功匯入全部資料！');
+        } catch(err) { alert('匯入失敗'); }
+      };
+      reader.readAsText(file);
+    }
+
+    // 初始化
+    refreshCategoryOptions();
+    refreshCodeOptions();
+    filterVendors();
+    renderEngList();
+    fetchCloudData();
+  </script>
+</body>
+</html>
