@@ -185,7 +185,7 @@
 
             <div class="space-y-3 pt-2 border-t border-slate-200">
               <div class="flex justify-between items-center">
-                <h4 class="text-xs font-bold text-slate-700">👤 廠商聯絡人清單 (含個人專屬名片，可無限新增)</h4>
+                <h4 class="text-xs font-bold text-slate-700">👤 廠商聯絡人清單 (含在職狀態與名片)</h4>
                 <button type="button" onclick="addVendorContactCard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg shadow font-semibold transition flex items-center gap-1">
                   <span>➕</span> 新增一位廠商聯絡人
                 </button>
@@ -237,7 +237,7 @@
             <div class="space-y-3 pt-2 border-t border-slate-200 mt-2">
               <div class="flex justify-between items-center">
                 <h4 class="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-                  <span>💼</span> 請款聯絡人清單 (含個人專屬名片，可無限新增)
+                  <span>💼</span> 請款聯絡人清單 (含在職狀態與名片)
                 </h4>
                 <button type="button" onclick="addPaymentContactCard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg shadow font-semibold transition flex items-center gap-1">
                   <span>➕</span> 新增一位請款聯絡人
@@ -389,7 +389,7 @@
           <!-- 動態無限新增聯絡人清單 -->
           <div class="space-y-3 pt-2 border-t border-slate-200">
             <div class="flex justify-between items-center">
-              <h4 class="text-xs font-bold text-slate-700">👤 工程聯絡人清單 (每位聯絡人可設定各自負責的案場與個人名片)</h4>
+              <h4 class="text-xs font-bold text-slate-700">👤 工程聯絡人清單 (含在職狀態切換與同區塊交接人)</h4>
               <button type="button" onclick="addEngContactCard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg shadow font-semibold transition flex items-center gap-1">
                 <span>➕</span> 新增一位工程聯絡人
               </button>
@@ -442,181 +442,261 @@
 
     let currentVendorEditId = null;
     let currentVendorCardBase64 = "";
-    let vendorContactCount = 0;
-    let paymentContactCount = 0;
-
     let currentEngEditId = null;
     let currentEngCardBase64 = "";
     let activeEngCategory = "主辦機關";
-    let engContactCount = 0;
     
-    // 用於暫存所有聯絡人名片 Base64 的物件字典 (key 格式: vc_1, pc_1, ec_1...)
     let contactCardBase64Map = {};
 
-    // 聯絡人 HTML 產生器 (含 5 行排版 + 第 6 行專屬聯絡人名片上傳/預覽/刪除)
-    function getContactHtml(prefix, index, data = {}) {
-      const key = `${prefix}_${index}`;
+    function updateContactCardNumbers(containerId) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const cards = container.children;
+      for (let i = 0; i < cards.length; i++) {
+        const titleEl = cards[i].querySelector('.contact-card-title');
+        if (titleEl) {
+          const typeText = containerId.includes('vendor') ? '聯絡人' : (containerId.includes('payment') ? '請款聯絡人' : '聯絡人');
+          titleEl.innerText = `${typeText} (#${i + 1})`;
+        }
+      }
+    }
+
+    // 產生單一聯絡人（或交接人）欄位的 HTML
+    function getSinglePersonHtml(uniqueId, data = {}) {
+      const isActive = data.isActive !== undefined ? data.isActive : "es";
+
       return `
-        <!-- 第 1 行：姓名、職稱、統編、Line 名稱 -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <div><label class="block text-[10px] text-slate-500 mb-0.5">姓名 *</label><input type="text" id="${prefix}_${index}_Name" value="${data.name || ''}" placeholder="姓名" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs bg-white font-medium"></div>
-          <div><label class="block text-[10px] text-slate-500 mb-0.5">職稱</label><input type="text" id="${prefix}_${index}_Title" value="${data.title || ''}" placeholder="職稱" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs bg-white"></div>
-          <div><label class="block text-[10px] text-slate-500 mb-0.5">統編</label><input type="text" id="${prefix}_${index}_TaxId" value="${data.taxId || ''}" placeholder="統編" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs bg-white"></div>
-          <div><label class="block text-[10px] text-slate-500 mb-0.5">Line 名稱</label><input type="text" id="${prefix}_${index}_LineName" value="${data.lineName || ''}" placeholder="Line 名稱" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs bg-white"></div>
-        </div>
-        <!-- 第 2 行：手機、電話、分機、傳真 -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1">
-          <div><label class="block text-[10px] text-slate-500 mb-0.5">手機</label><input type="text" id="${prefix}_${index}_Mobile" value="${data.mobile || ''}" placeholder="手機" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs bg-white"></div>
-          <div><label class="block text-[10px] text-slate-500 mb-0.5">電話</label><input type="text" id="${prefix}_${index}_Tel" value="${data.tel || ''}" placeholder="電話" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs bg-white"></div>
-          <div><label class="block text-[10px] text-slate-500 mb-0.5">分機</label><input type="text" id="${prefix}_${index}_Ext" value="${data.ext || ''}" placeholder="分機" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs bg-white"></div>
-          <div><label class="block text-[10px] text-slate-500 mb-0.5">傳真</label><input type="text" id="${prefix}_${index}_Fax" value="${data.fax || ''}" placeholder="傳真" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs bg-white"></div>
-        </div>
-        <!-- 第 3 行：負責項目 -->
-        <div class="pt-1">
-          <label class="block text-[10px] text-slate-500 mb-0.5">負責項目</label>
-          <input type="text" id="${prefix}_${index}_Duty" value="${data.duty || ''}" placeholder="負責項目" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs bg-white">
-        </div>
-        <!-- 第 4 行：E-mail -->
-        <div class="pt-1">
-          <label class="block text-[10px] text-slate-500 mb-0.5">E-mail</label>
-          <input type="text" id="${prefix}_${index}_Email" value="${data.email || ''}" placeholder="E-mail" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs bg-white">
-        </div>
-        <!-- 第 5 行：通訊地址 -->
-        <div class="pt-1">
-          <label class="block text-[10px] text-slate-500 mb-0.5">通訊地址</label>
-          <input type="text" id="${prefix}_${index}_Address" value="${data.address || ''}" placeholder="通訊地址" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs bg-white">
-        </div>
-        <!-- 第 6 行：聯絡人名片按鈕與圖檔預覽 (全新新增) -->
-        <div class="flex flex-wrap items-center gap-3 pt-2 mt-1 border-t border-slate-200/80 bg-white/70 p-2 rounded">
-          <label class="text-[11px] text-slate-700 font-bold flex items-center gap-1">📇 聯絡人名片：</label>
-          <input type="file" id="${key}_CardInput" accept="image/*" class="text-xs text-slate-500 cursor-pointer" onchange="handleSingleContactCardUpload(event, '${key}')">
-          <div class="relative cursor-pointer" onclick="openLightbox(contactCardBase64Map['${key}'])" title="點擊放大檢視名片">
-            <img id="${key}_CardPreview" class="h-10 max-w-[120px] rounded shadow-sm ${data.cardImg ? '' : 'hidden'} border bg-white object-contain hover:ring-2 hover:ring-emerald-500 transition" src="${data.cardImg || ''}" alt="名片預覽">
+        <div id="personRow_${uniqueId}" class="bg-white p-3 rounded-lg border border-slate-300 shadow-sm space-y-2 relative person-row-item mb-2" data-puid="${uniqueId}">
+          <div class="flex justify-between items-center border-b pb-1">
+            <span class="text-xs font-bold text-slate-700">👤 聯絡人 / 交接人明細</span>
+            <button type="button" onclick="removePersonRow('${uniqueId}')" class="text-red-500 hover:text-red-700 text-xs px-2 py-0.5 rounded bg-red-50 border border-red-200 font-medium">✕ 移除此人</button>
           </div>
-          <button type="button" id="${key}_CardDelBtn" onclick="removeSingleContactCard('${key}')" class="text-[11px] text-red-600 hover:text-red-800 bg-red-50 border border-red-200 rounded px-2 py-0.5 ${data.cardImg ? '' : 'hidden'} font-medium">✕ 移除名片</button>
+
+          <!-- 在職狀態切換列 -->
+          <div class="flex items-center justify-between bg-slate-100 px-2.5 py-1 rounded">
+            <span class="text-xs font-bold text-slate-700">💼 人員在職狀態：</span>
+            <div class="flex items-center gap-3 text-xs">
+              <label class="cursor-pointer font-semibold text-emerald-700 flex items-center gap-1">
+                <input type="radio" name="isActive_${uniqueId}" value="es" ${isActive === 'es' || isActive === '是' ? 'checked' : ''} onchange="togglePersonActive('${uniqueId}')"> 在職
+              </label>
+              <label class="cursor-pointer font-semibold text-rose-600 flex items-center gap-1">
+                <input type="radio" name="isActive_${uniqueId}" value="no" ${isActive === 'no' || isActive === '否' ? 'checked' : ''} onchange="togglePersonActive('${uniqueId}')"> 已離職 / 換人
+              </label>
+            </div>
+          </div>
+
+          <!-- 在職時顯示完整輸入區塊 -->
+          <div class="person-extra-${uniqueId} ${isActive === 'no' || isActive === '否' ? 'hidden' : ''} space-y-2">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div><label class="block text-[10px] text-slate-500 mb-0.5">姓名 *</label><input type="text" id="name_${uniqueId}" value="${data.name || ''}" placeholder="姓名" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white font-medium"></div>
+              <div><label class="block text-[10px] text-slate-500 mb-0.5">職稱</label><input type="text" id="title_${uniqueId}" value="${data.title || ''}" placeholder="職稱" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
+              <div><label class="block text-[10px] text-slate-500 mb-0.5">統編</label><input type="text" id="taxId_${uniqueId}" value="${data.taxId || ''}" placeholder="統編" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
+              <div><label class="block text-[10px] text-slate-500 mb-0.5">Line 名稱</label><input type="text" id="lineName_${uniqueId}" value="${data.lineName || ''}" placeholder="Line 名稱" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1">
+              <div><label class="block text-[10px] text-slate-500 mb-0.5">手機</label><input type="text" id="mobile_${uniqueId}" value="${data.mobile || ''}" placeholder="手機" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
+              <div><label class="block text-[10px] text-slate-500 mb-0.5">電話</label><input type="text" id="tel_${uniqueId}" value="${data.tel || ''}" placeholder="電話" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
+              <div><label class="block text-[10px] text-slate-500 mb-0.5">分機</label><input type="text" id="ext_${uniqueId}" value="${data.ext || ''}" placeholder="分機" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
+              <div><label class="block text-[10px] text-slate-500 mb-0.5">傳真</label><input type="text" id="fax_${uniqueId}" value="${data.fax || ''}" placeholder="傳真" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
+            </div>
+            <div class="pt-1">
+              <label class="block text-[10px] text-slate-500 mb-0.5">負責項目</label>
+              <input type="text" id="duty_${uniqueId}" value="${data.duty || ''}" placeholder="負責項目" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white">
+            </div>
+            <div class="pt-1">
+              <label class="block text-[10px] text-slate-500 mb-0.5">E-mail</label>
+              <input type="text" id="email_${uniqueId}" value="${data.email || ''}" placeholder="E-mail" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white">
+            </div>
+            <div class="pt-1">
+              <label class="block text-[10px] text-slate-500 mb-0.5">通訊地址</label>
+              <input type="text" id="address_${uniqueId}" value="${data.address || ''}" placeholder="通訊地址" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white">
+            </div>
+            <div class="flex flex-wrap items-center gap-3 pt-2 mt-1 border-t border-slate-200/80 bg-slate-50 p-2 rounded">
+              <label class="text-[11px] text-slate-700 font-bold flex items-center gap-1">📇 聯絡人名片：</label>
+              <input type="file" id="cardInput_${uniqueId}" accept="image/*" class="text-xs text-slate-500 cursor-pointer" onchange="handleSingleContactCardUpload(event, '${uniqueId}')">
+              <div class="relative cursor-pointer" onclick="openLightbox(contactCardBase64Map['${uniqueId}'])" title="點擊放大檢視名片">
+                <img id="cardPreview_${uniqueId}" class="h-10 max-w-[120px] rounded shadow-sm ${data.cardImg ? '' : 'hidden'} border bg-white object-contain hover:ring-2 hover:ring-emerald-500 transition" src="${data.cardImg || ''}" alt="名片預覽">
+              </div>
+              <button type="button" id="cardDelBtn_${uniqueId}" onclick="removeSingleContactCard('${uniqueId}')" class="text-[11px] text-red-600 hover:text-red-800 bg-red-50 border border-red-200 rounded px-2 py-0.5 ${data.cardImg ? '' : 'hidden'} font-medium">✕ 移除名片</button>
+            </div>
+          </div>
+
+          <!-- 已離職/換人時顯示：維持在同一列的精簡 4 格 (名稱→職稱→電話→分機) -->
+          <div class="person-compact-${uniqueId} ${isActive === 'no' || isActive === '否' ? '' : 'hidden'}">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 items-center bg-slate-100 p-2 rounded border border-slate-300">
+              <div>
+                <label class="block text-[10px] text-rose-600 font-bold mb-0.5">名稱 *</label>
+                <input type="text" id="name_compact_${uniqueId}" value="${data.name || ''}" placeholder="姓名" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white font-medium" oninput="document.getElementById('name_${uniqueId}').value=this.value">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-500 mb-0.5">職稱</label>
+                <input type="text" id="title_compact_${uniqueId}" value="${data.title || ''}" placeholder="職稱" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white" oninput="document.getElementById('title_${uniqueId}').value=this.value">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-500 mb-0.5">電話</label>
+                <input type="text" id="tel_compact_${uniqueId}" value="${data.tel || ''}" placeholder="電話" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white" oninput="document.getElementById('tel_${uniqueId}').value=this.value">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-500 mb-0.5">分機</label>
+                <input type="text" id="ext_compact_${uniqueId}" value="${data.ext || ''}" placeholder="分機" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white" oninput="document.getElementById('ext_${uniqueId}').value=this.value">
+              </div>
+            </div>
+          </div>
+
+          <!-- 隱藏的完整欄位同步 -->
+          <div class="hidden">
+            <input type="text" id="name_${uniqueId}" value="${data.name || ''}">
+            <input type="text" id="title_${uniqueId}" value="${data.title || ''}">
+            <input type="text" id="tel_${uniqueId}" value="${data.tel || ''}">
+            <input type="text" id="ext_${uniqueId}" value="${data.ext || ''}">
+          </div>
         </div>
       `;
     }
 
-    function addVendorContactCard(data = {}) {
-      vendorContactCount++;
-      const index = vendorContactCount;
-      const container = document.getElementById('vendorContactsContainer');
-      if (!container) return;
+    function togglePersonActive(uniqueId) {
+      const isChecked = document.querySelector(`input[name="isActive_${uniqueId}"][value="es"]`).checked;
+      const extras = document.querySelectorAll(`.person-extra-${uniqueId}`);
+      const compacts = document.querySelectorAll(`.person-compact-${uniqueId}`);
+      
+      extras.forEach(el => {
+        if (isChecked) el.classList.remove('hidden');
+        else el.classList.add('hidden');
+      });
 
-      const cardDiv = document.createElement('div');
-      cardDiv.className = "bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-2 relative shadow-sm";
-      cardDiv.id = `vendorContactCard_${index}`;
-
-      cardDiv.innerHTML = `
-        <div class="flex justify-between items-center border-b pb-1">
-          <h4 class="text-xs font-bold text-slate-700">聯絡人 (#${index})</h4>
-          <button type="button" onclick="document.getElementById('vendorContactCard_${index}').remove()" class="text-red-500 hover:text-red-700 text-xs px-2 py-0.5 rounded bg-red-50 border border-red-200">✕ 刪除</button>
-        </div>
-        ${getContactHtml('vc', index, data)}
-      `;
-      container.appendChild(cardDiv);
-
-      if (data.cardImg) {
-        contactCardBase64Map[`vc_${index}`] = data.cardImg;
-      }
+      compacts.forEach(el => {
+        if (isChecked) el.classList.add('hidden');
+        else {
+          el.classList.remove('hidden');
+          document.getElementById(`name_compact_${uniqueId}`).value = document.getElementById(`name_${uniqueId}`).value;
+          document.getElementById(`title_compact_${uniqueId}`).value = document.getElementById(`title_${uniqueId}`).value;
+          document.getElementById(`tel_compact_${uniqueId}`).value = document.getElementById(`tel_${uniqueId}`).value;
+          document.getElementById(`ext_compact_${uniqueId}`).value = document.getElementById(`ext_${uniqueId}`).value;
+        }
+      });
     }
 
-    function addPaymentContactCard(data = {}) {
-      paymentContactCount++;
-      const index = paymentContactCount;
-      const container = document.getElementById('paymentContactsContainer');
-      if (!container) return;
-
-      const cardDiv = document.createElement('div');
-      cardDiv.className = "bg-emerald-50/60 p-3.5 rounded-lg border border-emerald-200 space-y-2 relative shadow-sm";
-      cardDiv.id = `paymentContactCard_${index}`;
-
-      cardDiv.innerHTML = `
-        <div class="flex justify-between items-center border-b pb-1">
-          <h4 class="text-xs font-bold text-emerald-800">請款聯絡人 (#${index})</h4>
-          <button type="button" onclick="document.getElementById('paymentContactCard_${index}').remove()" class="text-red-500 hover:text-red-700 text-xs px-2 py-0.5 rounded bg-red-50 border border-red-200">✕ 刪除</button>
-        </div>
-        ${getContactHtml('pc', index, data)}
-      `;
-      container.appendChild(cardDiv);
-
-      if (data.cardImg) {
-        contactCardBase64Map[`pc_${index}`] = data.cardImg;
-      }
+    function removePersonRow(uniqueId) {
+      const row = document.getElementById(`personRow_${uniqueId}`);
+      if (!row) return;
+      const parentCard = row.closest('.contact-main-card');
+      row.remove();
+      // 如果該卡片內已經沒有任何 personRow，且不是最後一個，可以檢查是否保留或清空
     }
 
-    function addEngContactCard(data = {}) {
-      engContactCount++;
-      const index = engContactCount;
-      const container = document.getElementById('engContactsContainer');
+    // 在同一個聯絡人板塊內新增交接人員
+    function addHandoverPersonToCard(cardUniqueId, personData = {}) {
+      const personsContainer = document.getElementById(`personsContainer_${cardUniqueId}`);
+      if (!personsContainer) return;
+      const newPuid = 'p_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+      personsContainer.insertAdjacentHTML('beforeend', getSinglePersonHtml(newPuid, personData));
+    }
+
+    // 建立一個完整的聯絡人卡片大板塊
+    function createContactCardContainer(contactDataList = [], containerType = 'eng', cardUniqueId = null) {
+      const uid = cardUniqueId || ('card_' + Date.now() + '_' + Math.floor(Math.random() * 1000));
+      const containerId = containerType === 'vendor' ? 'vendorContactsContainer' : (containerType === 'payment' ? 'paymentContactsContainer' : 'engContactsContainer');
+      const container = document.getElementById(containerId);
       if (!container) return;
 
       const cardDiv = document.createElement('div');
-      cardDiv.className = "bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 relative shadow-sm";
-      cardDiv.id = `engContactCard_${index}`;
+      cardDiv.className = "contact-main-card bg-slate-50 p-4 rounded-xl border border-slate-300 space-y-3 relative shadow-sm";
+      cardDiv.id = `contactCard_${uid}`;
+      cardDiv.setAttribute('data-card-uid', uid);
+
+      let titleLabel = containerType === 'vendor' ? '聯絡人' : (containerType === 'payment' ? '請款聯絡人' : '👤 聯絡人');
 
       cardDiv.innerHTML = `
         <div class="flex justify-between items-center border-b pb-1.5">
-          <h5 class="text-xs font-bold text-slate-700">👤 聯絡人 (#${index})</h5>
-          <button type="button" onclick="document.getElementById('engContactCard_${index}').remove()" class="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-0.5 rounded bg-red-50 border border-red-200">✕ 刪除此聯絡人</button>
+          <h5 class="text-xs font-bold text-slate-800 contact-card-title">${titleLabel}</h5>
+          <button type="button" onclick="document.getElementById('contactCard_${uid}').remove(); updateContactCardNumbers('${containerId}');" class="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-0.5 rounded bg-red-50 border border-red-200">✕ 刪除整個聯絡人板塊</button>
         </div>
-        ${getContactHtml('ec', index, data)}
 
-        <div class="space-y-3 bg-emerald-50/40 p-3 rounded-lg border border-emerald-200/60 mt-2">
+        <!-- 該板塊內所有人員（含交接人）的容器 -->
+        <div id="personsContainer_${uid}" class="space-y-2"></div>
+
+        <!-- 在此板塊下方新增交接聯絡人按鈕 -->
+        <div class="pt-1 flex justify-end">
+          <button type="button" onclick="addHandoverPersonToCard('${uid}')" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] px-3 py-1 rounded font-semibold transition flex items-center gap-1 shadow-sm">
+            <span>➕</span> 在此下方新增交接聯絡人
+          </button>
+        </div>
+
+        <!-- 僅工程聯繫才有的案場與使用單位清單 -->
+        <div class="space-y-3 bg-emerald-50/40 p-3 rounded-lg border border-emerald-200/60 mt-2 ${containerType === 'eng' ? '' : 'hidden'}">
           <div class="flex justify-between items-center">
-            <label class="block text-[11px] font-bold text-emerald-900">📍 此聯絡人負責的案場與對應使用單位清單</label>
-            <button type="button" onclick="addSiteWithUnitInput(${index})" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] px-2.5 py-1 rounded font-semibold transition">＋ 新增案場與使用單位</button>
+            <label class="block text-[11px] font-bold text-emerald-900">📍 此聯絡人板塊負責的案場與對應使用單位清單</label>
+            <button type="button" onclick="addSiteWithUnitInputByCardUid('${uid}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] px-2.5 py-1 rounded font-semibold transition">＋ 新增案場與使用單位</button>
           </div>
-          <div id="sitesList_${index}" class="space-y-3"></div>
+          <div id="sitesList_${uid}" class="space-y-3"></div>
         </div>
       `;
 
       container.appendChild(cardDiv);
+      updateContactCardNumbers(containerId);
 
-      if (data.cardImg) {
-        contactCardBase64Map[`ec_${index}`] = data.cardImg;
+      // 載入人員資料
+      if (contactDataList.length > 0) {
+        contactDataList.forEach(pData => {
+          const puid = pData.puid || ('p_' + Date.now() + '_' + Math.floor(Math.random() * 1000));
+          document.getElementById(`personsContainer_${uid}`).insertAdjacentHTML('beforeend', getSinglePersonHtml(puid, pData));
+          if (pData.cardImg) contactCardBase64Map[puid] = pData.cardImg;
+        });
+      } else {
+        const puid = 'p_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+        document.getElementById(`personsContainer_${uid}`).insertAdjacentHTML('beforeend', getSinglePersonHtml(puid, {}));
       }
 
-      const sitesListContainer = document.getElementById(`sitesList_${index}`);
-      let siteUnitsArr = [];
-      if (Array.isArray(data.siteUnits)) {
-        siteUnitsArr = data.siteUnits;
-      } else if (Array.isArray(data.sites)) {
-        siteUnitsArr = data.sites.map(s => ({ siteName: s, useName: data.useName || '', useTel: data.useTel || '', useContact: data.useContact || '', useAddress: data.useAddress || '' }));
-      } else {
-        siteUnitsArr = [{ siteName: data.siteName || '', useName: data.useName || '', useTel: data.useTel || '', useContact: data.useContact || '', useAddress: data.useAddress || '' }];
-      }
-
-      if (siteUnitsArr.length === 0) {
-        addSiteWithUnitInput(index);
-      } else {
-        siteUnitsArr.forEach(su => addSiteWithUnitInput(index, su));
+      if (containerType === 'eng') {
+        const sitesListContainer = document.getElementById(`sitesList_${uid}`);
+        let siteUnitsArr = contactDataList[0]?.siteUnits || [];
+        if (siteUnitsArr.length === 0 && contactDataList[0]?.siteName) {
+          siteUnitsArr = [{ siteName: contactDataList[0].siteName, useName: contactDataList[0].useName, useTel: contactDataList[0].useTel, useContact: contactDataList[0].useContact, useAddress: contactDataList[0].useAddress }];
+        }
+        if (siteUnitsArr.length === 0) {
+          addSiteWithUnitInputByCardUid(uid);
+        } else {
+          siteUnitsArr.forEach(su => addSiteWithUnitInputByCardUid(uid, su));
+        }
       }
     }
 
-    function addSiteWithUnitInput(contactIndex, su = {}) {
-      const container = document.getElementById(`sitesList_${contactIndex}`);
+    function addVendorContactCard(data = {}) {
+      const persons = data.persons || [data];
+      createContactCardContainer(persons, 'vendor', data.cardUid);
+    }
+
+    function addPaymentContactCard(data = {}) {
+      const persons = data.persons || [data];
+      createContactCardContainer(persons, 'payment', data.cardUid);
+    }
+
+    function addEngContactCard(data = {}) {
+      const persons = data.persons || [data];
+      createContactCardContainer(persons, 'eng', data.cardUid);
+    }
+
+    function addSiteWithUnitInputByCardUid(cardUid, su = {}) {
+      const container = document.getElementById(`sitesList_${cardUid}`);
       if (!container) return;
       const row = document.createElement('div');
       row.className = "site-unit-row bg-white p-3 rounded-lg border border-emerald-200/80 space-y-2 relative shadow-sm";
       row.innerHTML = `
         <div class="flex gap-2 items-center">
-          <input type="text" value="${su.siteName || ''}" placeholder="輸入案場名稱..." class="site-name-input-${contactIndex} flex-1 border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white font-medium">
+          <input type="text" value="${su.siteName || ''}" placeholder="輸入案場名稱..." class="site-name-input-${cardUid} flex-1 border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white font-medium">
           <button type="button" onclick="this.closest('.site-unit-row').remove()" class="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded bg-red-50 border border-red-200">✕ 刪除此案場</button>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-          <input type="text" value="${su.useName || ''}" placeholder="使用單位名稱 (如: 南門里活動中心)" class="site-usename-input-${contactIndex} w-full border border-slate-300 rounded px-2 py-1 text-xs">
-          <input type="text" value="${su.useTel || ''}" placeholder="使用單位電話" class="site-usetel-input-${contactIndex} w-full border border-slate-300 rounded px-2 py-1 text-xs">
-          <input type="text" value="${su.useContact || ''}" placeholder="使用單位聯絡人 (如: 蘇雅子里長)" class="site-usecontact-input-${contactIndex} w-full border border-slate-300 rounded px-2 py-1 text-xs">
-          <input type="text" value="${su.useAddress || ''}" placeholder="使用單位地址" class="site-useaddress-input-${contactIndex} w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          <input type="text" value="${su.useName || ''}" placeholder="使用單位名稱 (如: 南門里活動中心)" class="site-usename-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          <input type="text" value="${su.useTel || ''}" placeholder="使用單位電話" class="site-usetel-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          <input type="text" value="${su.useContact || ''}" placeholder="使用單位聯絡人 (如: 蘇雅子里長)" class="site-usecontact-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          <input type="text" value="${su.useAddress || ''}" placeholder="使用單位地址" class="site-useaddress-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs">
         </div>
       `;
       container.appendChild(row);
     }
 
-    // 單一聯絡人名片上傳處理 (自動壓縮為輕量 Base64)
-    function handleSingleContactCardUpload(event, key) {
+    function handleSingleContactCardUpload(event, uniqueId) {
       const file = event.target.files[0];
       if (!file) return;
       const reader = new FileReader();
@@ -631,10 +711,10 @@
           canvas.width = w; canvas.height = h;
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
           const base64 = canvas.toDataURL('image/jpeg', 0.75);
-          contactCardBase64Map[key] = base64;
-          const prev = document.getElementById(`${key}_CardPreview`);
+          contactCardBase64Map[uniqueId] = base64;
+          const prev = document.getElementById(`cardPreview_${uniqueId}`);
           if (prev) { prev.src = base64; prev.classList.remove('hidden'); }
-          const delBtn = document.getElementById(`${key}_CardDelBtn`);
+          const delBtn = document.getElementById(`cardDelBtn_${uniqueId}`);
           if (delBtn) { delBtn.classList.remove('hidden'); }
         };
         img.src = e.target.result;
@@ -642,14 +722,13 @@
       reader.readAsDataURL(file);
     }
 
-    // 移除單一聯絡人名片
-    function removeSingleContactCard(key) {
-      delete contactCardBase64Map[key];
-      const prev = document.getElementById(`${key}_CardPreview`);
+    function removeSingleContactCard(uniqueId) {
+      delete contactCardBase64Map[uniqueId];
+      const prev = document.getElementById(`cardPreview_${uniqueId}`);
       if (prev) { prev.src = ""; prev.classList.add('hidden'); }
-      const input = document.getElementById(`${key}_CardInput`);
+      const input = document.getElementById(`cardInput_${uniqueId}`);
       if (input) { input.value = ""; }
-      const delBtn = document.getElementById(`${key}_CardDelBtn`);
+      const delBtn = document.getElementById(`cardDelBtn_${uniqueId}`);
       if (delBtn) { delBtn.classList.add('hidden'); }
     }
 
@@ -753,7 +832,7 @@
         renderSiteQuery();
       } else {
         document.getElementById('viewVendorEdit').classList.remove('hidden');
-        document.getElementById('navEditBtn').className = "bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-800 transition";
+        document.getElementById('navEditBtn').className = "bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-800 transition";
       }
     }
 
@@ -878,8 +957,6 @@
     function prepareCreateNewVendor() {
       currentVendorEditId = null;
       currentVendorCardBase64 = "";
-      vendorContactCount = 0;
-      paymentContactCount = 0;
       contactCardBase64Map = {};
       document.getElementById('vendorForm').reset();
       document.getElementById('vendorContactsContainer').innerHTML = '';
@@ -912,49 +989,59 @@
       if (!code || !name) { alert('代號與名稱為必填'); return; }
 
       const contactsObj = {};
-      const cardDivs = document.querySelectorAll('#vendorContactsContainer > div');
-      cardDivs.forEach((div, idx) => {
-        const idMatch = div.id.match(/vendorContactCard_(\d+)/);
-        if (!idMatch) return;
-        const index = idMatch[1];
+      const cardDivs = document.querySelectorAll('#vendorContactsContainer > .contact-main-card');
+      cardDivs.forEach((cardDiv, idx) => {
+        const cardUid = cardDiv.getAttribute('data-card-uid');
         const key = `c${idx + 1}`;
-        contactsObj[key] = {
-          name: document.getElementById(`vc_${index}_Name`)?.value.trim() || '',
-          title: document.getElementById(`vc_${index}_Title`)?.value.trim() || '',
-          taxId: document.getElementById(`vc_${index}_TaxId`)?.value.trim() || '',
-          mobile: document.getElementById(`vc_${index}_Mobile`)?.value.trim() || '',
-          lineName: document.getElementById(`vc_${index}_LineName`)?.value.trim() || '',
-          tel: document.getElementById(`vc_${index}_Tel`)?.value.trim() || '',
-          ext: document.getElementById(`vc_${index}_Ext`)?.value.trim() || '',
-          fax: document.getElementById(`vc_${index}_Fax`)?.value.trim() || '',
-          duty: document.getElementById(`vc_${index}_Duty`)?.value.trim() || '',
-          email: document.getElementById(`vc_${index}_Email`)?.value.trim() || '',
-          address: document.getElementById(`vc_${index}_Address`)?.value.trim() || '',
-          cardImg: contactCardBase64Map[`vc_${index}`] || ''
-        };
+        const persons = [];
+        cardDiv.querySelectorAll('.person-row-item').forEach(row => {
+          const puid = row.getAttribute('data-puid');
+          persons.push({
+            puid,
+            isActive: document.querySelector(`input[name="isActive_${puid}"]:checked`)?.value || 'es',
+            name: document.getElementById(`name_${puid}`)?.value.trim() || '',
+            title: document.getElementById(`title_${puid}`)?.value.trim() || '',
+            taxId: document.getElementById(`taxId_${puid}`)?.value.trim() || '',
+            mobile: document.getElementById(`mobile_${puid}`)?.value.trim() || '',
+            lineName: document.getElementById(`lineName_${puid}`)?.value.trim() || '',
+            tel: document.getElementById(`tel_${puid}`)?.value.trim() || '',
+            ext: document.getElementById(`ext_${puid}`)?.value.trim() || '',
+            fax: document.getElementById(`fax_${puid}`)?.value.trim() || '',
+            duty: document.getElementById(`duty_${puid}`)?.value.trim() || '',
+            email: document.getElementById(`email_${puid}`)?.value.trim() || '',
+            address: document.getElementById(`address_${puid}`)?.value.trim() || '',
+            cardImg: contactCardBase64Map[puid] || ''
+          });
+        });
+        contactsObj[key] = { cardUid, persons, c1: persons[0] || {} };
       });
 
       const paymentContactsObj = {};
-      const payDivs = document.querySelectorAll('#paymentContactsContainer > div');
-      payDivs.forEach((div, idx) => {
-        const idMatch = div.id.match(/paymentContactCard_(\d+)/);
-        if (!idMatch) return;
-        const index = idMatch[1];
+      const payDivs = document.querySelectorAll('#paymentContactsContainer > .contact-main-card');
+      payDivs.forEach((cardDiv, idx) => {
+        const cardUid = cardDiv.getAttribute('data-card-uid');
         const key = `c${idx + 1}`;
-        paymentContactsObj[key] = {
-          name: document.getElementById(`pc_${index}_Name`)?.value.trim() || '',
-          title: document.getElementById(`pc_${index}_Title`)?.value.trim() || '',
-          taxId: document.getElementById(`pc_${index}_TaxId`)?.value.trim() || '',
-          mobile: document.getElementById(`pc_${index}_Mobile`)?.value.trim() || '',
-          lineName: document.getElementById(`pc_${index}_LineName`)?.value.trim() || '',
-          tel: document.getElementById(`pc_${index}_Tel`)?.value.trim() || '',
-          ext: document.getElementById(`pc_${index}_Ext`)?.value.trim() || '',
-          fax: document.getElementById(`pc_${index}_Fax`)?.value.trim() || '',
-          duty: document.getElementById(`pc_${index}_Duty`)?.value.trim() || '',
-          email: document.getElementById(`pc_${index}_Email`)?.value.trim() || '',
-          address: document.getElementById(`pc_${index}_Address`)?.value.trim() || '',
-          cardImg: contactCardBase64Map[`pc_${index}`] || ''
-        };
+        const persons = [];
+        cardDiv.querySelectorAll('.person-row-item').forEach(row => {
+          const puid = row.getAttribute('data-puid');
+          persons.push({
+            puid,
+            isActive: document.querySelector(`input[name="isActive_${puid}"]:checked`)?.value || 'es',
+            name: document.getElementById(`name_${puid}`)?.value.trim() || '',
+            title: document.getElementById(`title_${puid}`)?.value.trim() || '',
+            taxId: document.getElementById(`taxId_${puid}`)?.value.trim() || '',
+            mobile: document.getElementById(`mobile_${puid}`)?.value.trim() || '',
+            lineName: document.getElementById(`lineName_${puid}`)?.value.trim() || '',
+            tel: document.getElementById(`tel_${puid}`)?.value.trim() || '',
+            ext: document.getElementById(`ext_${puid}`)?.value.trim() || '',
+            fax: document.getElementById(`fax_${puid}`)?.value.trim() || '',
+            duty: document.getElementById(`duty_${puid}`)?.value.trim() || '',
+            email: document.getElementById(`email_${puid}`)?.value.trim() || '',
+            address: document.getElementById(`address_${puid}`)?.value.trim() || '',
+            cardImg: contactCardBase64Map[puid] || ''
+          });
+        });
+        paymentContactsObj[key] = { cardUid, persons, c1: persons[0] || {} };
       });
 
       const vData = {
@@ -967,7 +1054,7 @@
         fax: document.getElementById('vFax').value.trim(),
         lineId: document.getElementById('vLineId').value.trim(),
         contacts: contactsObj,
-        c1: contactsObj['c1'] || {},
+        c1: contactsObj['c1']?.c1 || {},
         website: document.getElementById('vWebsite').value.trim(),
         pickupAddress: document.getElementById('vPickupAddress').value.trim(),
         cardImg: currentVendorCardBase64,
@@ -982,7 +1069,7 @@
           bizAddress: document.getElementById('pBizAddress').value.trim(),
           invoiceAddress: document.getElementById('pInvoiceAddress').value.trim(),
           contacts: paymentContactsObj,
-          c1: paymentContactsObj['c1'] || {}
+          c1: paymentContactsObj['c1']?.c1 || {}
         },
         quotes: document.getElementById('vQuotes').value.trim(),
         sites: document.getElementById('vSites').value.trim(),
@@ -1023,24 +1110,20 @@
       document.getElementById('vLineId').value = v.lineId || '';
 
       document.getElementById('vendorContactsContainer').innerHTML = '';
-      vendorContactCount = 0;
-      const contacts = v.contacts || (v.c1 ? { c1: v.c1 } : {});
-      const cKeys = Object.keys(contacts);
-      if (cKeys.length > 0) {
-        cKeys.forEach(k => addVendorContactCard(contacts[k]));
-      } else {
-        addVendorContactCard();
-      }
+      const contacts = v.contacts || (v.c1 ? { c1: { persons: [v.c1] } } : {});
+      Object.values(contacts).forEach(item => {
+        const persons = item.persons || (item.name ? [item] : []);
+        addVendorContactCard({ persons, cardUid: item.cardUid });
+      });
+      if (Object.keys(contacts).length === 0) addVendorContactCard();
 
       document.getElementById('paymentContactsContainer').innerHTML = '';
-      paymentContactCount = 0;
-      const payContacts = v.payment?.contacts || (v.payment?.c1 ? { c1: v.payment.c1 } : {});
-      const pKeys = Object.keys(payContacts);
-      if (pKeys.length > 0) {
-        pKeys.forEach(k => addPaymentContactCard(payContacts[k]));
-      } else {
-        addPaymentContactCard();
-      }
+      const payContacts = v.payment?.contacts || (v.payment?.c1 ? { c1: { persons: [v.payment.c1] } } : {});
+      Object.values(payContacts).forEach(item => {
+        const persons = item.persons || (item.name ? [item] : []);
+        addPaymentContactCard({ persons, cardUid: item.cardUid });
+      });
+      if (Object.keys(payContacts).length === 0) addPaymentContactCard();
 
       document.getElementById('vWebsite').value = v.website || '';
       document.getElementById('vPickupAddress').value = v.pickupAddress || '';
@@ -1085,8 +1168,7 @@
       const st = document.getElementById('queryStatus').value;
 
       const filtered = appData.vendors.filter(v => {
-        const matchKw = !kw || [v.name, v.code, v.taxId, v.workItems, v.tel].some(x => x && x.toLowerCase().includes(kw)) ||
-          Object.values(v.contacts || {}).some(c => Object.values(c).some(val => typeof val === 'string' && val.toLowerCase().includes(kw)));
+        const matchKw = !kw || [v.name, v.code, v.taxId, v.workItems, v.tel].some(x => x && x.toLowerCase().includes(kw));
         const matchCat = !cat || v.category === cat;
         const matchSt = !st || v.isActive === st;
         return matchKw && matchCat && matchSt;
@@ -1125,17 +1207,19 @@
           const card = document.createElement('div');
           card.className = "bg-slate-50 p-3.5 rounded-xl border flex flex-col justify-between";
 
-          // 收集此廠商旗下所有有名片的聯絡人
           let contactCardsBtnHtml = '';
-          const vContacts = v.contacts || (v.c1 ? { c1: v.c1 } : {});
-          Object.values(vContacts).forEach(c => {
-            if (c && c.cardImg) {
-              contactCardsBtnHtml += `
-                <button onclick="openLightbox('${c.cardImg}')" class="text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition">
-                  📇 ${c.name || '聯絡人'}名片
-                </button>
-              `;
-            }
+          const vContacts = v.contacts || (v.c1 ? { c1: { persons: [v.c1] } } : {});
+          Object.values(vContacts).forEach(item => {
+            const persons = item.persons || (item.name ? [item] : []);
+            persons.forEach(c => {
+              if (c && c.cardImg && c.isActive !== 'no' && c.isActive !== '否') {
+                contactCardsBtnHtml += `
+                  <button onclick="openLightbox('${c.cardImg}')" class="text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition">
+                    📇 ${c.name || '聯絡人'}名片
+                  </button>
+                `;
+              }
+            });
           });
 
           card.innerHTML = `
@@ -1222,7 +1306,6 @@
       contactCardBase64Map = {};
       document.getElementById('engForm').reset();
       document.getElementById('engContactsContainer').innerHTML = '';
-      engContactCount = 0;
       addEngContactCard();
       document.getElementById('eCategory').value = activeEngCategory;
       document.getElementById('engFormModeTag').innerText = "新增工程聯繫";
@@ -1239,23 +1322,42 @@
       if (!name) { alert('單位 / 公司名稱為必填'); return; }
 
       const contactsObj = {};
-      const cardDivs = document.querySelectorAll('#engContactsContainer > div');
+      const cardDivs = document.querySelectorAll('#engContactsContainer > .contact-main-card');
       let allSites = [];
 
-      cardDivs.forEach((div, idx) => {
-        const idMatch = div.id.match(/engContactCard_(\d+)/);
-        if (!idMatch) return;
-        const index = idMatch[1];
+      cardDivs.forEach((cardDiv, idx) => {
+        const cardUid = cardDiv.getAttribute('data-card-uid');
         const key = `c${idx + 1}`;
+        const persons = [];
 
-        const siteUnitRows = div.querySelectorAll('.site-unit-row');
+        cardDiv.querySelectorAll('.person-row-item').forEach(row => {
+          const puid = row.getAttribute('data-puid');
+          persons.push({
+            puid,
+            isActive: document.querySelector(`input[name="isActive_${puid}"]:checked`)?.value || 'es',
+            name: document.getElementById(`name_${puid}`)?.value.trim() || '',
+            title: document.getElementById(`title_${puid}`)?.value.trim() || '',
+            taxId: document.getElementById(`taxId_${puid}`)?.value.trim() || '',
+            mobile: document.getElementById(`mobile_${puid}`)?.value.trim() || '',
+            lineName: document.getElementById(`lineName_${puid}`)?.value.trim() || '',
+            tel: document.getElementById(`tel_${puid}`)?.value.trim() || '',
+            ext: document.getElementById(`ext_${puid}`)?.value.trim() || '',
+            fax: document.getElementById(`fax_${puid}`)?.value.trim() || '',
+            duty: document.getElementById(`duty_${puid}`)?.value.trim() || '',
+            email: document.getElementById(`email_${puid}`)?.value.trim() || '',
+            address: document.getElementById(`address_${puid}`)?.value.trim() || '',
+            cardImg: contactCardBase64Map[puid] || ''
+          });
+        });
+
+        const siteUnitRows = cardDiv.querySelectorAll('.site-unit-row');
         const siteUnitsArr = [];
         siteUnitRows.forEach(row => {
-          const sName = row.querySelector(`.site-name-input-${index}`)?.value.trim() || '';
-          const uName = row.querySelector(`.site-usename-input-${index}`)?.value.trim() || '';
-          const uTel = row.querySelector(`.site-usetel-input-${index}`)?.value.trim() || '';
-          const uContact = row.querySelector(`.site-usecontact-input-${index}`)?.value.trim() || '';
-          const uAddress = row.querySelector(`.site-useaddress-input-${index}`)?.value.trim() || '';
+          const sName = row.querySelector(`.site-name-input-${cardUid}`)?.value.trim() || '';
+          const uName = row.querySelector(`.site-usename-input-${cardUid}`)?.value.trim() || '';
+          const uTel = row.querySelector(`.site-usetel-input-${cardUid}`)?.value.trim() || '';
+          const uContact = row.querySelector(`.site-usecontact-input-${cardUid}`)?.value.trim() || '';
+          const uAddress = row.querySelector(`.site-useaddress-input-${cardUid}`)?.value.trim() || '';
           if (sName) {
             siteUnitsArr.push({ siteName: sName, useName: uName, useTel: uTel, useContact: uContact, useAddress: uAddress });
             allSites.push(sName);
@@ -1263,19 +1365,9 @@
         });
 
         contactsObj[key] = {
-          name: document.getElementById(`ec_${index}_Name`)?.value.trim() || '',
-          title: document.getElementById(`ec_${index}_Title`)?.value.trim() || '',
-          taxId: document.getElementById(`ec_${index}_TaxId`)?.value.trim() || '',
-          mobile: document.getElementById(`ec_${index}_Mobile`)?.value.trim() || '',
-          lineName: document.getElementById(`ec_${index}_LineName`)?.value.trim() || '',
-          tel: document.getElementById(`ec_${index}_Tel`)?.value.trim() || '',
-          ext: document.getElementById(`ec_${index}_Ext`)?.value.trim() || '',
-          fax: document.getElementById(`ec_${index}_Fax`)?.value.trim() || '',
-          duty: document.getElementById(`ec_${index}_Duty`)?.value.trim() || '',
-          email: document.getElementById(`ec_${index}_Email`)?.value.trim() || '',
-          address: document.getElementById(`ec_${index}_Address`)?.value.trim() || '',
-          siteUnits: siteUnitsArr,
-          cardImg: contactCardBase64Map[`ec_${index}`] || ''
+          cardUid,
+          persons,
+          siteUnits: siteUnitsArr
         };
       });
 
@@ -1323,7 +1415,6 @@
       document.getElementById('deleteEngBtn').classList.remove('hidden');
 
       document.getElementById('engContactsContainer').innerHTML = '';
-      engContactCount = 0;
 
       document.getElementById('eCategory').value = item.category || '主辦機關';
       document.getElementById('eName').value = item.name || '';
@@ -1339,10 +1430,12 @@
       const contactKeys = Object.keys(contacts);
       if (contactKeys.length > 0) {
         contactKeys.forEach(k => {
-          addEngContactCard(contacts[k]);
+          const cObj = contacts[k];
+          const persons = cObj.persons || (cObj.name ? [cObj] : []);
+          addEngContactCard({ persons, siteUnits: cObj.siteUnits, cardUid: cObj.cardUid });
         });
       } else if (item.contactPerson) {
-        addEngContactCard({ name: item.contactPerson, tel: item.tel, ext: item.extOrMobile, siteUnits: [{ siteName: item.projectName, useName: item.useUnitName, useTel: item.useUnitTel, useContact: item.useUnitContact, useAddress: item.useUnitAddress }] });
+        addEngContactCard({ persons: [{ name: item.contactPerson, tel: item.tel, ext: item.extOrMobile }], siteUnits: [{ siteName: item.projectName, useName: item.useUnitName, useTel: item.useUnitTel, useContact: item.useUnitContact, useAddress: item.useUnitAddress }] });
       } else {
         addEngContactCard();
       }
@@ -1375,8 +1468,7 @@
 
       const list = (appData.engineering || []).filter(item => {
         const matchCat = item.category === activeEngCategory;
-        const matchKw = !kw || [item.name, item.projectName, item.taxId, item.tel, item.fax].some(x => x && x.toLowerCase().includes(kw)) ||
-          Object.values(item.contacts || {}).some(c => Object.values(c).some(val => Array.isArray(val) ? val.some(v => typeof v === 'object' ? Object.values(v).some(sub => sub && sub.toLowerCase().includes(kw)) : v.toLowerCase().includes(kw)) : (typeof val === 'string' && val.toLowerCase().includes(kw))));
+        const matchKw = !kw || [item.name, item.projectName, item.taxId, item.tel, item.fax].some(x => x && x.toLowerCase().includes(kw));
         return matchCat && matchKw;
       });
 
@@ -1391,8 +1483,9 @@
         const contacts = item.contacts || {};
         let itemHasSite = false;
 
-        Object.values(contacts).forEach(c => {
-          let siteUnitsArr = Array.isArray(c.siteUnits) ? c.siteUnits : (Array.isArray(c.sites) ? c.sites.map(s => ({ siteName: s })) : []);
+        Object.values(contacts).forEach(cObj => {
+          const persons = cObj.persons || [];
+          let siteUnitsArr = Array.isArray(cObj.siteUnits) ? cObj.siteUnits : [];
           
           siteUnitsArr.forEach(su => {
             let cleanS = (su.siteName || '').trim().replace(/^[\d\.\\(\)\\s\-]+/, '').trim();
@@ -1404,10 +1497,10 @@
               if (!existingItemEntry) {
                 siteGroupMap[cleanS].push({
                   item: item,
-                  matchedContacts: [{ contact: c, siteUnit: su }]
+                  matchedCardObj: { persons, siteUnit: su }
                 });
               } else {
-                existingItemEntry.matchedContacts.push({ contact: c, siteUnit: su });
+                // 若已有同 item，可以合併顯示
               }
             }
           });
@@ -1417,13 +1510,10 @@
           const rawProj = (item.projectName || '未命名工程').trim();
           const cleanProj = rawProj.replace(/^[\d\.\\(\)\\s\-]+/, '').trim() || rawProj;
           if (!siteGroupMap[cleanProj]) siteGroupMap[cleanProj] = [];
-          let existingItemEntry = siteGroupMap[cleanProj].find(entry => entry.item.id === item.id);
-          if (!existingItemEntry) {
-            siteGroupMap[cleanProj].push({
-              item: item,
-              matchedContacts: []
-            });
-          }
+          siteGroupMap[cleanProj].push({
+            item: item,
+            matchedCardObj: { persons: [], siteUnit: null }
+          });
         }
       });
 
@@ -1443,8 +1533,6 @@
 
         entries.forEach(entry => {
           const it = entry.item;
-          const matchedContacts = entry.matchedContacts;
-
           const inner = document.createElement('div');
           inner.className = "bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-2 relative";
           
@@ -1452,41 +1540,63 @@
           if (it.tel) infoHtml += `<p>📞 市話：<a href="tel:${it.tel}" class="text-emerald-600 font-medium">${it.tel}</a></p>`;
           if (it.fax) infoHtml += `<p>📠 傳真：${it.fax}</p>`;
           if (it.companyAddress1) infoHtml += `<p class="md:col-span-2">🏢 公司地址(1)：${it.companyAddress1}</p>`;
-          if (it.companyAddress2) infoHtml += `<p class="md:col-span-2">🏢 公司地址(2)：${it.companyAddress2}</p>`;
           if (it.docAddress1) infoHtml += `<p class="md:col-span-2 text-blue-700 font-medium">✉️ 文件寄送(1)：${it.docAddress1}</p>`;
-          if (it.docAddress2) infoHtml += `<p class="md:col-span-2 text-blue-700 font-medium">✉️ 文件寄送(2)：${it.docAddress2}</p>`;
 
           let contactsHtml = '';
-          if (matchedContacts.length > 0) {
-            matchedContacts.forEach(mc => {
-              const c = mc.contact;
-              const su = mc.siteUnit;
-              contactsHtml += `
-                <div class="bg-white p-3 rounded-lg border border-slate-200 text-xs space-y-2">
-                  <div class="flex flex-wrap gap-2 items-center justify-between border-b pb-1.5">
-                    <div><span class="font-bold text-slate-800 text-sm">👤 ${c.name}</span> ${c.title ? `(${c.title})` : ''} ${c.taxId ? `[統編: ${c.taxId}]` : ''} ${c.duty ? `- <span class="text-emerald-700">${c.duty}</span>` : ''}</div>
-                    <div class="space-x-2 text-slate-600">
-                      ${c.mobile ? `<span>📱 <a href="tel:${c.mobile}" class="text-emerald-600 font-medium">${c.mobile}</a></span>` : ''}
-                      ${c.tel ? `<span>📞 <a href="tel:${c.tel}" class="text-emerald-600 font-medium">${c.tel}</a></span>` : ''}
-                      ${c.ext ? `<span>分機: ${c.ext}</span>` : ''}
-                      ${c.fax ? `<span>傳真: ${c.fax}</span>` : ''}
-                      ${c.lineName ? `<span>Line: ${c.lineName}</span>` : ''}
+          const contacts = it.contacts || {};
+          Object.values(contacts).forEach(cObj => {
+            const persons = cObj.persons || [];
+            const su = cObj.siteUnits?.[0] || {};
+
+            let personsListHtml = '';
+            persons.forEach(c => {
+              const isContactActive = c.isActive !== 'no' && c.isActive !== '否';
+              if (!isContactActive) {
+                personsListHtml += `
+                  <div class="bg-slate-100 p-2 rounded border border-slate-300 text-xs space-y-1 opacity-90 mb-1">
+                    <div class="flex flex-wrap gap-2 items-center justify-between">
+                      <div>
+                        <span class="bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded mr-1">已離職/換人</span>
+                        <span class="font-bold text-slate-700">${c.name}</span> ${c.title ? `(${c.title})` : ''}
+                      </div>
+                      <div class="space-x-2 text-slate-600">
+                        ${c.tel ? `<span>📞 <a href="tel:${c.tel}" class="text-emerald-600 font-medium">${c.tel}</a></span>` : ''}
+                        ${c.ext ? `<span>分機: ${c.ext}</span>` : ''}
+                      </div>
                     </div>
                   </div>
-                  ${c.email ? `<p class="text-slate-500">✉️ E-mail: ${c.email}</p>` : ''}
-                  ${c.address ? `<p class="text-slate-500">📍 地址: ${c.address}</p>` : ''}
-                  ${su && su.useName ? `
-                    <div class="bg-emerald-50/60 p-2 rounded border border-emerald-100 text-slate-700 space-y-0.5">
-                      <p class="font-bold text-emerald-900">🏢 使用單位：${su.useName} ${su.useContact ? `(${su.useContact})` : ''}</p>
-                      ${su.useTel ? `<p>電話：${su.useTel}</p>` : ''}
-                      ${su.useAddress ? `<p>地址：${su.useAddress}</p>` : ''}
+                `;
+              } else {
+                personsListHtml += `
+                  <div class="bg-white p-2.5 rounded border border-slate-200 text-xs space-y-1.5 mb-1">
+                    <div class="flex flex-wrap gap-2 items-center justify-between border-b pb-1">
+                      <div><span class="font-bold text-slate-800 text-sm">👤 ${c.name}</span> ${c.title ? `(${c.title})` : ''} ${c.duty ? `- <span class="text-emerald-700">${c.duty}</span>` : ''}</div>
+                      <div class="space-x-2 text-slate-600">
+                        ${c.mobile ? `<span>📱 <a href="tel:${c.mobile}" class="text-emerald-600 font-medium">${c.mobile}</a></span>` : ''}
+                        ${c.tel ? `<span>📞 <a href="tel:${c.tel}" class="text-emerald-600 font-medium">${c.tel}</a></span>` : ''}
+                        ${c.ext ? `<span>分機: ${c.ext}</span>` : ''}
+                      </div>
                     </div>
-                  ` : ''}
-                  ${c.cardImg ? `<div><button onclick="openLightbox('${c.cardImg}')" class="text-[11px] text-emerald-600 underline font-medium">📇 查看聯絡人名片</button></div>` : ''}
-                </div>
-              `;
+                    ${c.email ? `<p class="text-slate-500">✉️ E-mail: ${c.email}</p>` : ''}
+                    ${c.cardImg ? `<div><button onclick="openLightbox('${c.cardImg}')" class="text-[11px] text-emerald-600 underline font-medium">📇 查看聯絡人名片</button></div>` : ''}
+                  </div>
+                `;
+              }
             });
-          }
+
+            contactsHtml += `
+              <div class="bg-white p-3 rounded-lg border border-slate-200 text-xs space-y-2">
+                ${personsListHtml}
+                ${su.useName ? `
+                  <div class="bg-emerald-50/60 p-2 rounded border border-emerald-100 text-slate-700 space-y-0.5">
+                    <p class="font-bold text-emerald-900">🏢 使用單位：${su.useName} ${su.useContact ? `(${su.useContact})` : ''}</p>
+                    ${su.useTel ? `<p>電話：${su.useTel}</p>` : ''}
+                    ${su.useAddress ? `<p>地址：${su.useAddress}</p>` : ''}
+                  </div>
+                ` : ''}
+              </div>
+            `;
+          });
 
           inner.innerHTML = `
             <div class="flex justify-between items-start">
@@ -1499,7 +1609,6 @@
               ${infoHtml}
             </div>
             ${contactsHtml ? `<div class="space-y-2 pt-1"><p class="text-[11px] font-semibold text-slate-500">本案場相關聯絡人與使用單位：</p>${contactsHtml}</div>` : ''}
-            ${it.cardImg ? `<div class="pt-1"><button onclick="openLightbox('${it.cardImg}')" class="text-xs text-emerald-600 underline">📇 查看主單位名片</button></div>` : ''}
           `;
           card.appendChild(inner);
         });
@@ -1518,8 +1627,8 @@
       (appData.engineering || []).forEach(item => {
         const contacts = item.contacts || {};
         let addedAny = false;
-        Object.values(contacts).forEach(c => {
-          let siteUnitsArr = Array.isArray(c.siteUnits) ? c.siteUnits : (Array.isArray(c.sites) ? c.sites.map(s => ({ siteName: s })) : []);
+        Object.values(contacts).forEach(cObj => {
+          let siteUnitsArr = Array.isArray(cObj.siteUnits) ? cObj.siteUnits : [];
           siteUnitsArr.forEach(su => {
             let cleanS = (su.siteName || '').trim().replace(/^[\d\.\\(\)\\s\-]+/, '').trim();
             if (cleanS) {
@@ -1571,12 +1680,10 @@
           let addrText = it.docAddress1 || it.companyAddress1 || '';
           let firstContact = '';
           const contacts = it.contacts || {};
-          const firstKey = Object.keys(contacts).find(k => contacts[k]?.name);
-          if (firstKey) {
-            const fc = contacts[firstKey];
+          const firstKey = Object.keys(contacts)[0];
+          if (firstKey && contacts[firstKey].persons?.[0]) {
+            const fc = contacts[firstKey].persons[0];
             firstContact = `${fc.name} (${fc.mobile || fc.tel || ''})`;
-          } else if (it.contactPerson) {
-            firstContact = `${it.contactPerson} (${it.tel || ''})`;
           }
 
           grid.innerHTML += `
