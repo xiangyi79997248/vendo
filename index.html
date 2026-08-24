@@ -461,7 +461,6 @@
       }
     }
 
-    // 產生單一聯絡人（或交接人）欄位的 HTML
     function getSinglePersonHtml(uniqueId, data = {}) {
       const isActive = data.isActive !== undefined ? data.isActive : "es";
 
@@ -579,12 +578,9 @@
     function removePersonRow(uniqueId) {
       const row = document.getElementById(`personRow_${uniqueId}`);
       if (!row) return;
-      const parentCard = row.closest('.contact-main-card');
       row.remove();
-      // 如果該卡片內已經沒有任何 personRow，且不是最後一個，可以檢查是否保留或清空
     }
 
-    // 在同一個聯絡人板塊內新增交接人員
     function addHandoverPersonToCard(cardUniqueId, personData = {}) {
       const personsContainer = document.getElementById(`personsContainer_${cardUniqueId}`);
       if (!personsContainer) return;
@@ -592,8 +588,7 @@
       personsContainer.insertAdjacentHTML('beforeend', getSinglePersonHtml(newPuid, personData));
     }
 
-    // 建立一個完整的聯絡人卡片大板塊
-    function createContactCardContainer(contactDataList = [], containerType = 'eng', cardUniqueId = null) {
+    function createContactCardContainer(contactDataList = [], containerType = 'eng', cardUniqueId = null, siteUnitsList = []) {
       const uid = cardUniqueId || ('card_' + Date.now() + '_' + Math.floor(Math.random() * 1000));
       const containerId = containerType === 'vendor' ? 'vendorContactsContainer' : (containerType === 'payment' ? 'paymentContactsContainer' : 'engContactsContainer');
       const container = document.getElementById(containerId);
@@ -612,17 +607,14 @@
           <button type="button" onclick="document.getElementById('contactCard_${uid}').remove(); updateContactCardNumbers('${containerId}');" class="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-0.5 rounded bg-red-50 border border-red-200">✕ 刪除整個聯絡人板塊</button>
         </div>
 
-        <!-- 該板塊內所有人員（含交接人）的容器 -->
         <div id="personsContainer_${uid}" class="space-y-2"></div>
 
-        <!-- 在此板塊下方新增交接聯絡人按鈕 -->
         <div class="pt-1 flex justify-end">
           <button type="button" onclick="addHandoverPersonToCard('${uid}')" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] px-3 py-1 rounded font-semibold transition flex items-center gap-1 shadow-sm">
             <span>➕</span> 在此下方新增交接聯絡人
           </button>
         </div>
 
-        <!-- 僅工程聯繫才有的案場與使用單位清單 -->
         <div class="space-y-3 bg-emerald-50/40 p-3 rounded-lg border border-emerald-200/60 mt-2 ${containerType === 'eng' ? '' : 'hidden'}">
           <div class="flex justify-between items-center">
             <label class="block text-[11px] font-bold text-emerald-900">📍 此聯絡人板塊負責的案場與對應使用單位清單</label>
@@ -635,7 +627,6 @@
       container.appendChild(cardDiv);
       updateContactCardNumbers(containerId);
 
-      // 載入人員資料
       if (contactDataList.length > 0) {
         contactDataList.forEach(pData => {
           const puid = pData.puid || ('p_' + Date.now() + '_' + Math.floor(Math.random() * 1000));
@@ -648,10 +639,17 @@
       }
 
       if (containerType === 'eng') {
-        const sitesListContainer = document.getElementById(`sitesList_${uid}`);
-        let siteUnitsArr = contactDataList[0]?.siteUnits || [];
+        let siteUnitsArr = siteUnitsList.length > 0 ? siteUnitsList : (contactDataList[0]?.siteUnits || []);
         if (siteUnitsArr.length === 0 && contactDataList[0]?.siteName) {
-          siteUnitsArr = [{ siteName: contactDataList[0].siteName, useName: contactDataList[0].useName, useTel: contactDataList[0].useTel, useContact: contactDataList[0].useContact, useAddress: contactDataList[0].useAddress }];
+          siteUnitsArr = [{ 
+            siteName: contactDataList[0].siteName, 
+            useName: contactDataList[0].useName, 
+            useTel: contactDataList[0].useTel, 
+            useExt: contactDataList[0].useExt, 
+            useFax: contactDataList[0].useFax, 
+            useContact: contactDataList[0].useContact, 
+            useAddress: contactDataList[0].useAddress 
+          }];
         }
         if (siteUnitsArr.length === 0) {
           addSiteWithUnitInputByCardUid(uid);
@@ -663,17 +661,17 @@
 
     function addVendorContactCard(data = {}) {
       const persons = data.persons || [data];
-      createContactCardContainer(persons, 'vendor', data.cardUid);
+      createContactCardContainer(persons, 'vendor', data.cardUid, data.siteUnits);
     }
 
     function addPaymentContactCard(data = {}) {
       const persons = data.persons || [data];
-      createContactCardContainer(persons, 'payment', data.cardUid);
+      createContactCardContainer(persons, 'payment', data.cardUid, data.siteUnits);
     }
 
     function addEngContactCard(data = {}) {
       const persons = data.persons || [data];
-      createContactCardContainer(persons, 'eng', data.cardUid);
+      createContactCardContainer(persons, 'eng', data.cardUid, data.siteUnits);
     }
 
     function addSiteWithUnitInputByCardUid(cardUid, su = {}) {
@@ -686,11 +684,13 @@
           <input type="text" value="${su.siteName || ''}" placeholder="輸入案場名稱..." class="site-name-input-${cardUid} flex-1 border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white font-medium">
           <button type="button" onclick="this.closest('.site-unit-row').remove()" class="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded bg-red-50 border border-red-200">✕ 刪除此案場</button>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-          <input type="text" value="${su.useName || ''}" placeholder="使用單位名稱 (如: 南門里活動中心)" class="site-usename-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs">
-          <input type="text" value="${su.useTel || ''}" placeholder="使用單位電話" class="site-usetel-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <input type="text" value="${su.useName || ''}" placeholder="使用單位名稱 (如: 南門里活動中心)" class="site-usename-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs md:col-span-2">
+          <input type="text" value="${su.useTel || ''}" placeholder="電話" class="site-usetel-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          <input type="text" value="${su.useExt || ''}" placeholder="分機" class="site-useext-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          <input type="text" value="${su.useFax || ''}" placeholder="傳真" class="site-usefax-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs">
           <input type="text" value="${su.useContact || ''}" placeholder="使用單位聯絡人 (如: 蘇雅子里長)" class="site-usecontact-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs">
-          <input type="text" value="${su.useAddress || ''}" placeholder="使用單位地址" class="site-useaddress-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          <input type="text" value="${su.useAddress || ''}" placeholder="使用單位地址" class="site-useaddress-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs md:col-span-2">
         </div>
       `;
       container.appendChild(row);
@@ -1237,7 +1237,7 @@
                 ${v.cardImg ? `<button onclick="openLightbox('${v.cardImg}')" class="text-xs text-emerald-600 hover:text-emerald-800 underline">🏢 公司名片</button>` : ''}
                 ${contactCardsBtnHtml}
               </div>
-              <button onclick="loadVendorToEdit('${v.id}')" class="bg-slate-800 hover:bg-slate-900 text-white text-xs px-3 py-1 rounded transition">✏️ 編輯</button>
+              <button onclick="loadVendorToEdit('${v.id}')" class="bg-slate-800 text-white text-xs px-3 py-1 rounded transition">✏️ 編輯</button>
             </div>
           `;
           grid.appendChild(card);
@@ -1356,10 +1356,12 @@
           const sName = row.querySelector(`.site-name-input-${cardUid}`)?.value.trim() || '';
           const uName = row.querySelector(`.site-usename-input-${cardUid}`)?.value.trim() || '';
           const uTel = row.querySelector(`.site-usetel-input-${cardUid}`)?.value.trim() || '';
+          const uExt = row.querySelector(`.site-useext-input-${cardUid}`)?.value.trim() || '';
+          const uFax = row.querySelector(`.site-usefax-input-${cardUid}`)?.value.trim() || '';
           const uContact = row.querySelector(`.site-usecontact-input-${cardUid}`)?.value.trim() || '';
           const uAddress = row.querySelector(`.site-useaddress-input-${cardUid}`)?.value.trim() || '';
           if (sName) {
-            siteUnitsArr.push({ siteName: sName, useName: uName, useTel: uTel, useContact: uContact, useAddress: uAddress });
+            siteUnitsArr.push({ siteName: sName, useName: uName, useTel: uTel, useExt: uExt, useFax: uFax, useContact: uContact, useAddress: uAddress });
             allSites.push(sName);
           }
         });
@@ -1484,7 +1486,6 @@
         let itemHasSite = false;
 
         Object.values(contacts).forEach(cObj => {
-          const persons = cObj.persons || [];
           let siteUnitsArr = Array.isArray(cObj.siteUnits) ? cObj.siteUnits : [];
           
           siteUnitsArr.forEach(su => {
@@ -1496,11 +1497,8 @@
               let existingItemEntry = siteGroupMap[cleanS].find(entry => entry.item.id === item.id);
               if (!existingItemEntry) {
                 siteGroupMap[cleanS].push({
-                  item: item,
-                  matchedCardObj: { persons, siteUnit: su }
+                  item: item
                 });
-              } else {
-                // 若已有同 item，可以合併顯示
               }
             }
           });
@@ -1511,8 +1509,7 @@
           const cleanProj = rawProj.replace(/^[\d\.\\(\)\\s\-]+/, '').trim() || rawProj;
           if (!siteGroupMap[cleanProj]) siteGroupMap[cleanProj] = [];
           siteGroupMap[cleanProj].push({
-            item: item,
-            matchedCardObj: { persons: [], siteUnit: null }
+            item: item
           });
         }
       });
@@ -1553,7 +1550,7 @@
               const isContactActive = c.isActive !== 'no' && c.isActive !== '否';
               if (!isContactActive) {
                 personsListHtml += `
-                  <div class="bg-slate-100 p-2 rounded border border-slate-300 text-xs space-y-1 opacity-90 mb-1">
+                  <div class="bg-slate-100 p-2.5 rounded border border-slate-300 text-xs space-y-1 opacity-90 mb-1">
                     <div class="flex flex-wrap gap-2 items-center justify-between">
                       <div>
                         <span class="bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded mr-1">已離職/換人</span>
@@ -1584,14 +1581,19 @@
               }
             });
 
+            let unitInfoStr = '';
+            if (su.useName) unitInfoStr += `🏢 使用單位：${su.useName} ${su.useContact ? `(${su.useContact})` : ''}<br>`;
+            if (su.useTel) unitInfoStr += `電話：${su.useTel} `;
+            if (su.useExt) unitInfoStr += `分機：${su.useExt} `;
+            if (su.useFax) unitInfoStr += `傳真：${su.useFax}<br>`;
+            if (su.useAddress) unitInfoStr += `地址：${su.useAddress}`;
+
             contactsHtml += `
               <div class="bg-white p-3 rounded-lg border border-slate-200 text-xs space-y-2">
                 ${personsListHtml}
-                ${su.useName ? `
+                ${unitInfoStr ? `
                   <div class="bg-emerald-50/60 p-2 rounded border border-emerald-100 text-slate-700 space-y-0.5">
-                    <p class="font-bold text-emerald-900">🏢 使用單位：${su.useName} ${su.useContact ? `(${su.useContact})` : ''}</p>
-                    ${su.useTel ? `<p>電話：${su.useTel}</p>` : ''}
-                    ${su.useAddress ? `<p>地址：${su.useAddress}</p>` : ''}
+                    <p class="font-bold text-emerald-900">${unitInfoStr}</p>
                   </div>
                 ` : ''}
               </div>
