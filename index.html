@@ -389,9 +389,9 @@
           <!-- 動態無限新增聯絡人清單 -->
           <div class="space-y-3 pt-2 border-t border-slate-200">
             <div class="flex justify-between items-center">
-              <h4 class="text-xs font-bold text-slate-700">👤 工程聯絡人清單 (含在職狀態切換與同區塊交接人)</h4>
+              <h4 class="text-xs font-bold text-slate-700">👤 工程聯絡人板塊 (每位交接人可個別指定所屬公司)</h4>
               <button type="button" onclick="addEngContactCard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg shadow font-semibold transition flex items-center gap-1">
-                <span>➕</span> 新增一位工程聯絡人
+                <span>➕</span> 新增一位工程聯絡人板塊
               </button>
             </div>
             <div id="engContactsContainer" class="space-y-4"></div>
@@ -455,7 +455,7 @@
       for (let i = 0; i < cards.length; i++) {
         const titleEl = cards[i].querySelector('.contact-card-title');
         if (titleEl) {
-          const typeText = containerId.includes('vendor') ? '聯絡人' : (containerId.includes('payment') ? '請款聯絡人' : '聯絡人');
+          const typeText = containerId.includes('vendor') ? '聯絡人' : (containerId.includes('payment') ? '請款聯絡人' : '聯絡人板塊');
           titleEl.innerText = `${typeText} (#${i + 1})`;
         }
       }
@@ -469,6 +469,12 @@
           <div class="flex justify-between items-center border-b pb-1">
             <span class="text-xs font-bold text-slate-700">👤 聯絡人 / 交接人明細</span>
             <button type="button" onclick="removePersonRow('${uniqueId}')" class="text-red-500 hover:text-red-700 text-xs px-2 py-0.5 rounded bg-red-50 border border-red-200 font-medium">✕ 移除此人</button>
+          </div>
+
+          <!-- 每個聯絡人下方獨立的公司名稱欄位 -->
+          <div class="bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-200">
+            <label class="block text-[11px] font-bold text-emerald-900 mb-1">🏢 該聯絡人所屬的公司 / 單位名稱</label>
+            <input type="text" id="personCompany_${uniqueId}" value="${data.personCompany || ''}" placeholder="例如：臺南市南化區公所 / 臺南市南化區圖書館..." class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs font-bold text-slate-800">
           </div>
 
           <!-- 在職狀態切換列 -->
@@ -510,6 +516,13 @@
               <label class="block text-[10px] text-slate-500 mb-0.5">通訊地址</label>
               <input type="text" id="address_${uniqueId}" value="${data.address || ''}" placeholder="通訊地址" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white">
             </div>
+            
+            <!-- 聯絡人個別備註欄位 -->
+            <div class="pt-1">
+              <label class="block text-[10px] text-slate-500 mb-0.5">備註 (離職交接說明等)</label>
+              <input type="text" id="remark_${uniqueId}" value="${data.remark || ''}" placeholder="填寫該聯絡人備註..." class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white">
+            </div>
+
             <div class="flex flex-wrap items-center gap-3 pt-2 mt-1 border-t border-slate-200/80 bg-slate-50 p-2 rounded">
               <label class="text-[11px] text-slate-700 font-bold flex items-center gap-1">📇 聯絡人名片：</label>
               <input type="file" id="cardInput_${uniqueId}" accept="image/*" class="text-xs text-slate-500 cursor-pointer" onchange="handleSingleContactCardUpload(event, '${uniqueId}')">
@@ -520,8 +533,8 @@
             </div>
           </div>
 
-          <!-- 已離職/換人時顯示：維持在同一列的精簡 4 格 (名稱→職稱→電話→分機) -->
-          <div class="person-compact-${uniqueId} ${isActive === 'no' || isActive === '否' ? '' : 'hidden'}">
+          <!-- 已離職/換人時顯示：精簡 4 格並保留備註 -->
+          <div class="person-compact-${uniqueId} ${isActive === 'no' || isActive === '否' ? '' : 'hidden'} space-y-2">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-2 items-center bg-slate-100 p-2 rounded border border-slate-300">
               <div>
                 <label class="block text-[10px] text-rose-600 font-bold mb-0.5">名稱 *</label>
@@ -540,6 +553,10 @@
                 <input type="text" id="ext_compact_${uniqueId}" value="${data.ext || ''}" placeholder="分機" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white" oninput="document.getElementById('ext_${uniqueId}').value=this.value">
               </div>
             </div>
+            <div>
+              <label class="block text-[10px] text-slate-500 mb-0.5">備註 (離職交接說明等)</label>
+              <input type="text" id="remark_compact_${uniqueId}" value="${data.remark || ''}" placeholder="填寫離職備註..." class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white" oninput="document.getElementById('remark_${uniqueId}').value=this.value">
+            </div>
           </div>
 
           <!-- 隱藏的完整欄位同步 -->
@@ -548,6 +565,7 @@
             <input type="text" id="title_${uniqueId}" value="${data.title || ''}">
             <input type="text" id="tel_${uniqueId}" value="${data.tel || ''}">
             <input type="text" id="ext_${uniqueId}" value="${data.ext || ''}">
+            <input type="text" id="remark_${uniqueId}" value="${data.remark || ''}">
           </div>
         </div>
       `;
@@ -571,6 +589,7 @@
           document.getElementById(`title_compact_${uniqueId}`).value = document.getElementById(`title_${uniqueId}`).value;
           document.getElementById(`tel_compact_${uniqueId}`).value = document.getElementById(`tel_${uniqueId}`).value;
           document.getElementById(`ext_compact_${uniqueId}`).value = document.getElementById(`ext_${uniqueId}`).value;
+          document.getElementById(`remark_compact_${uniqueId}`).value = document.getElementById(`remark_${uniqueId}`).value;
         }
       });
     }
@@ -599,12 +618,12 @@
       cardDiv.id = `contactCard_${uid}`;
       cardDiv.setAttribute('data-card-uid', uid);
 
-      let titleLabel = containerType === 'vendor' ? '聯絡人' : (containerType === 'payment' ? '請款聯絡人' : '👤 聯絡人');
+      let titleLabel = containerType === 'vendor' ? '聯絡人' : (containerType === 'payment' ? '請款聯絡人' : '👤 聯絡人板塊');
 
       cardDiv.innerHTML = `
         <div class="flex justify-between items-center border-b pb-1.5">
           <h5 class="text-xs font-bold text-slate-800 contact-card-title">${titleLabel}</h5>
-          <button type="button" onclick="document.getElementById('contactCard_${uid}').remove(); updateContactCardNumbers('${containerId}');" class="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-0.5 rounded bg-red-50 border border-red-200">✕ 刪除整個聯絡人板塊</button>
+          <button type="button" onclick="document.getElementById('contactCard_${uid}').remove(); updateContactCardNumbers('${containerId}');" class="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-0.5 rounded bg-red-50 border border-red-200">✕ 刪除整個板塊</button>
         </div>
 
         <div id="personsContainer_${uid}" class="space-y-2"></div>
@@ -1002,6 +1021,7 @@
           const puid = row.getAttribute('data-puid');
           persons.push({
             puid,
+            personCompany: document.getElementById(`personCompany_${puid}`)?.value.trim() || '',
             isActive: document.querySelector(`input[name="isActive_${puid}"]:checked`)?.value || 'es',
             name: document.getElementById(`name_${puid}`)?.value.trim() || '',
             title: document.getElementById(`title_${puid}`)?.value.trim() || '',
@@ -1014,6 +1034,7 @@
             duty: document.getElementById(`duty_${puid}`)?.value.trim() || '',
             email: document.getElementById(`email_${puid}`)?.value.trim() || '',
             address: document.getElementById(`address_${puid}`)?.value.trim() || '',
+            remark: document.getElementById(`remark_${puid}`)?.value.trim() || '',
             cardImg: contactCardBase64Map[puid] || ''
           });
         });
@@ -1030,6 +1051,7 @@
           const puid = row.getAttribute('data-puid');
           persons.push({
             puid,
+            personCompany: document.getElementById(`personCompany_${puid}`)?.value.trim() || '',
             isActive: document.querySelector(`input[name="isActive_${puid}"]:checked`)?.value || 'es',
             name: document.getElementById(`name_${puid}`)?.value.trim() || '',
             title: document.getElementById(`title_${puid}`)?.value.trim() || '',
@@ -1042,6 +1064,7 @@
             duty: document.getElementById(`duty_${puid}`)?.value.trim() || '',
             email: document.getElementById(`email_${puid}`)?.value.trim() || '',
             address: document.getElementById(`address_${puid}`)?.value.trim() || '',
+            remark: document.getElementById(`remark_${puid}`)?.value.trim() || '',
             cardImg: contactCardBase64Map[puid] || ''
           });
         });
@@ -1117,7 +1140,7 @@
       const contacts = v.contacts || (v.c1 ? { c1: { persons: [v.c1] } } : {});
       Object.values(contacts).forEach(item => {
         const persons = item.persons || (item.name ? [item] : []);
-        addVendorContactCard({ persons, cardUid: item.cardUid });
+        addVendorContactCard({ persons, cardUid: item.cardUid, siteUnits: item.siteUnits });
       });
       if (Object.keys(contacts).length === 0) addVendorContactCard();
 
@@ -1125,7 +1148,7 @@
       const payContacts = v.payment?.contacts || (v.payment?.c1 ? { c1: { persons: [v.payment.c1] } } : {});
       Object.values(payContacts).forEach(item => {
         const persons = item.persons || (item.name ? [item] : []);
-        addPaymentContactCard({ persons, cardUid: item.cardUid });
+        addPaymentContactCard({ persons, cardUid: item.cardUid, siteUnits: item.siteUnits });
       });
       if (Object.keys(payContacts).length === 0) addPaymentContactCard();
 
@@ -1338,6 +1361,7 @@
           const puid = row.getAttribute('data-puid');
           persons.push({
             puid,
+            personCompany: document.getElementById(`personCompany_${puid}`)?.value.trim() || '',
             isActive: document.querySelector(`input[name="isActive_${puid}"]:checked`)?.value || 'es',
             name: document.getElementById(`name_${puid}`)?.value.trim() || '',
             title: document.getElementById(`title_${puid}`)?.value.trim() || '',
@@ -1350,6 +1374,7 @@
             duty: document.getElementById(`duty_${puid}`)?.value.trim() || '',
             email: document.getElementById(`email_${puid}`)?.value.trim() || '',
             address: document.getElementById(`address_${puid}`)?.value.trim() || '',
+            remark: document.getElementById(`remark_${puid}`)?.value.trim() || '',
             cardImg: contactCardBase64Map[puid] || ''
           });
         });
@@ -1502,9 +1527,7 @@
               
               let existingItemEntry = siteGroupMap[cleanS].find(entry => entry.item.id === item.id);
               if (!existingItemEntry) {
-                siteGroupMap[cleanS].push({
-                  item: item
-                });
+                siteGroupMap[cleanS].push({ item: item });
               }
             }
           });
@@ -1514,9 +1537,7 @@
           const rawProj = (item.projectName || '未命名工程').trim();
           const cleanProj = rawProj.replace(/^[\d\.\\(\)\\s\-]+/, '').trim() || rawProj;
           if (!siteGroupMap[cleanProj]) siteGroupMap[cleanProj] = [];
-          siteGroupMap[cleanProj].push({
-            item: item
-          });
+          siteGroupMap[cleanProj].push({ item: item });
         }
       });
 
@@ -1530,14 +1551,14 @@
               <span class="w-2 h-5 bg-emerald-600 rounded-full inline-block"></span>
               <h3 class="font-bold text-slate-800 text-base">工程案場：${projName}</h3>
             </div>
-            <span class="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">${entries.length} 個單位</span>
+            <span class="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">${entries.length} 筆紀錄</span>
           </div>
         `;
 
         entries.forEach(entry => {
           const it = entry.item;
           const inner = document.createElement('div');
-          inner.className = "bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-2 relative";
+          inner.className = "bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-3 relative";
           
           let infoHtml = '';
           if (it.tel) infoHtml += `<p>📞 市話：<a href="tel:${it.tel}" class="text-emerald-600 font-medium">${it.tel}</a></p>`;
@@ -1545,63 +1566,119 @@
           if (it.companyAddress1) infoHtml += `<p class="md:col-span-2">🏢 公司地址(1)：${it.companyAddress1}</p>`;
           if (it.docAddress1) infoHtml += `<p class="md:col-span-2 text-blue-700 font-medium">✉️ 文件寄送(1)：${it.docAddress1}</p>`;
 
-          let contactsHtml = '';
+          // 收集所有使用單位與公司聯絡人，將同一個使用單位合併整合，避免重複渲染
+          const siteUnitMap = {};
           const contacts = it.contacts || {};
+          
           Object.values(contacts).forEach(cObj => {
             const persons = cObj.persons || [];
-            const su = cObj.siteUnits?.[0] || {};
+            const siteUnitsArr = cObj.siteUnits || [];
 
-            let personsListHtml = '';
-            persons.forEach(c => {
-              const isContactActive = c.isActive !== 'no' && c.isActive !== '否';
-              if (!isContactActive) {
-                personsListHtml += `
-                  <div class="bg-slate-100 p-2.5 rounded border border-slate-300 text-xs space-y-1 opacity-90 mb-1">
-                    <div class="flex flex-wrap gap-2 items-center justify-between">
-                      <div>
-                        <span class="bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded mr-1">已離職/換人</span>
-                        <span class="font-bold text-slate-700">${c.name}</span> ${c.title ? `(${c.title})` : ''}
-                      </div>
-                      <div class="space-x-2 text-slate-600">
-                        ${c.tel ? `<span>📞 <a href="tel:${c.tel}" class="text-emerald-600 font-medium">${c.tel}</a></span>` : ''}
-                        ${c.ext ? `<span>分機: ${c.ext}</span>` : ''}
-                      </div>
-                    </div>
-                  </div>
-                `;
-              } else {
-                personsListHtml += `
-                  <div class="bg-white p-2.5 rounded border border-slate-200 text-xs space-y-1.5 mb-1">
-                    <div class="flex flex-wrap gap-2 items-center justify-between border-b pb-1">
-                      <div><span class="font-bold text-slate-800 text-sm">👤 ${c.name}</span> ${c.title ? `(${c.title})` : ''} ${c.duty ? `- <span class="text-emerald-700">${c.duty}</span>` : ''}</div>
-                      <div class="space-x-2 text-slate-600">
-                        ${c.mobile ? `<span>📱 <a href="tel:${c.mobile}" class="text-emerald-600 font-medium">${c.mobile}</a></span>` : ''}
-                        ${c.tel ? `<span>📞 <a href="tel:${c.tel}" class="text-emerald-600 font-medium">${c.tel}</a></span>` : ''}
-                        ${c.ext ? `<span>分機: ${c.ext}</span>` : ''}
-                      </div>
-                    </div>
-                    ${c.email ? `<p class="text-slate-500">✉️ E-mail: ${c.email}</p>` : ''}
-                    ${c.cardImg ? `<div><button onclick="openLightbox('${c.cardImg}')" class="text-[11px] text-emerald-600 underline font-medium">📇 查看聯絡人名片</button></div>` : ''}
-                  </div>
-                `;
+            // 針對該板塊定義的使用單位歸納
+            siteUnitsArr.forEach(su => {
+              let suKey = (su.useName || '未分類使用單位').trim();
+              if (!siteUnitMap[suKey]) {
+                siteUnitMap[suKey] = { siteInfo: su, companies: {} };
               }
+              
+              persons.forEach(c => {
+                let compName = (c.personCompany || '未分類公司/單位').trim();
+                if (!siteUnitMap[suKey].companies[compName]) {
+                  siteUnitMap[suKey].companies[compName] = [];
+                }
+                siteUnitMap[suKey].companies[compName].push(c);
+              });
             });
 
-            let unitInfoStr = '';
-            if (su.useName) unitInfoStr += `🏢 使用單位：${su.useName} ${su.useContact ? `(${su.useContact})` : ''}<br>`;
-            if (su.useTel) unitInfoStr += `電話：${su.useTel} `;
-            if (su.useExt) unitInfoStr += `分機：${su.useExt} `;
-            if (su.useFax) unitInfoStr += `傳真：${su.useFax}<br>`;
-            if (su.useAddress) unitInfoStr += `地址：${su.useAddress}`;
+            // 若該板塊有填聯絡人但沒特別填使用單位時的備用處理
+            if (siteUnitsArr.length === 0) {
+              let suKey = '相關單位';
+              if (!siteUnitMap[suKey]) {
+                siteUnitMap[suKey] = { siteInfo: {}, companies: {} };
+              }
+              persons.forEach(c => {
+                let compName = (c.personCompany || '未分類公司/單位').trim();
+                if (!siteUnitMap[suKey].companies[compName]) {
+                  siteUnitMap[suKey].companies[compName] = [];
+                }
+                siteUnitMap[suKey].companies[compName].push(c);
+              });
+            }
+          });
 
-            contactsHtml += `
-              <div class="bg-white p-3 rounded-lg border border-slate-200 text-xs space-y-2">
-                ${personsListHtml}
-                ${unitInfoStr ? `
-                  <div class="bg-emerald-50/60 p-2 rounded border border-emerald-100 text-slate-700 space-y-0.5">
-                    <p class="font-bold text-emerald-900">${unitInfoStr}</p>
+          let siteUnitHtml = '';
+          Object.keys(siteUnitMap).forEach(suKey => {
+            const suData = siteUnitMap[suKey];
+            const su = suData.siteInfo;
+            const companies = suData.companies;
+
+            let companiesHtml = '';
+            Object.keys(companies).forEach(compName => {
+              const personsInComp = companies[compName];
+              let personsListHtml = '';
+
+              personsInComp.forEach(c => {
+                const isContactActive = c.isActive !== 'no' && c.isActive !== '否';
+                if (!isContactActive) {
+                  personsListHtml += `
+                    <div class="bg-slate-100 p-2.5 rounded border border-slate-300 text-xs space-y-1 opacity-90 mb-1">
+                      <div class="flex flex-wrap gap-2 items-center justify-between">
+                        <div>
+                          <span class="bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded mr-1">已離職/換人</span>
+                          <span class="font-bold text-slate-700">${c.name}</span> ${c.title ? `(${c.title})` : ''}
+                        </div>
+                        <div class="space-x-2 text-slate-600">
+                          ${c.tel ? `<span>📞 <a href="tel:${c.tel}" class="text-emerald-600 font-medium">${c.tel}</a></span>` : ''}
+                          ${c.ext ? `<span>分機: ${c.ext}</span>` : ''}
+                        </div>
+                      </div>
+                      ${c.remark ? `<div class="text-slate-500 italic mt-1">備註：${c.remark}</div>` : ''}
+                    </div>
+                  `;
+                } else {
+                  personsListHtml += `
+                    <div class="bg-white p-2.5 rounded border border-slate-200 text-xs space-y-1.5 mb-1">
+                      <div class="flex flex-wrap gap-2 items-center justify-between border-b pb-1">
+                        <div><span class="font-bold text-slate-800 text-sm">👤 ${c.name}</span> ${c.title ? `(${c.title})` : ''} ${c.duty ? `- <span class="text-emerald-700">${c.duty}</span>` : ''}</div>
+                        <div class="space-x-2 text-slate-600">
+                          ${c.mobile ? `<span>📱 <a href="tel:${c.mobile}" class="text-emerald-600 font-medium">${c.mobile}</a></span>` : ''}
+                          ${c.tel ? `<span>📞 <a href="tel:${c.tel}" class="text-emerald-600 font-medium">${c.tel}</a></span>` : ''}
+                          ${c.ext ? `<span>分機: ${c.ext}</span>` : ''}
+                        </div>
+                      </div>
+                      ${c.email ? `<p class="text-slate-500">✉️ E-mail: ${c.email}</p>` : ''}
+                      ${c.remark ? `<p class="text-slate-500 italic">備註：${c.remark}</p>` : ''}
+                      ${c.cardImg ? `<div><button onclick="openLightbox('${c.cardImg}')" class="text-[11px] text-emerald-600 underline font-medium">📇 查看聯絡人名片</button></div>` : ''}
+                    </div>
+                  `;
+                }
+              });
+
+              companiesHtml += `
+                <div class="bg-white p-3 rounded-lg border border-slate-200 text-xs space-y-2 mb-2 shadow-sm">
+                  <div class="text-xs font-bold text-emerald-900 bg-emerald-100 px-2.5 py-1.5 rounded-md border border-emerald-300 mb-2 flex items-center gap-1.5">
+                    <span>🏢</span> 公司/單位名稱：${compName}
                   </div>
-                ` : ''}
+                  ${personsListHtml}
+                </div>
+              `;
+            });
+
+            let unitHeaderHtml = '';
+            if (su.useName || su.useTel || su.useAddress) {
+              unitHeaderHtml = `
+                <div class="bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-200 mb-3 text-slate-700 space-y-0.5">
+                  <p class="font-bold text-emerald-900">🏢 使用單位：${su.useName || ''} ${su.useContact ? `(${su.useContact})` : ''}</p>
+                  <p class="text-xs text-slate-600">電話：${su.useTel || ''} ${su.useExt ? `分機：${su.useExt}` : ''} ${su.useFax ? `傳真：${su.useFax}` : ''}</p>
+                  ${su.useAddress ? `<p class="text-xs text-slate-600">地址：${su.useAddress}</p>` : ''}
+                </div>
+              `;
+            }
+
+            siteUnitHtml += `
+              <div class="bg-white p-3.5 rounded-xl border border-slate-300 mb-3 space-y-2 shadow-sm">
+                ${unitHeaderHtml}
+                ${companiesHtml}
               </div>
             `;
           });
@@ -1616,7 +1693,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-1 text-xs text-slate-600">
               ${infoHtml}
             </div>
-            ${contactsHtml ? `<div class="space-y-2 pt-1"><p class="text-[11px] font-semibold text-slate-500">本案場相關聯絡人與使用單位：</p>${contactsHtml}</div>` : ''}
+            ${siteUnitHtml ? `<div class="space-y-2 pt-2 border-t"><p class="text-[11px] font-semibold text-slate-500">本案場使用單位與各公司聯絡人分類：</p>${siteUnitHtml}</div>` : ''}
           `;
           card.appendChild(inner);
         });
