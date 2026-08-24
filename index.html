@@ -35,10 +35,10 @@
       
       <!-- 大系統切換按鈕 -->
       <div class="flex items-center gap-2 bg-emerald-800/80 p-1 rounded-xl border border-emerald-600">
-        <button id="mainSysVendorBtn" onclick="switchSystem('vendor')" class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition bg-emerald-600 text-white shadow">
+        <button id="mainSysVendorBtn" onclick="switchSystem('vendor')" class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition text-emerald-100 hover:text-white">
           📋 採購廠商聯絡資料
         </button>
-        <button id="mainSysEngBtn" onclick="switchSystem('eng')" class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition text-emerald-100 hover:text-white">
+        <button id="mainSysEngBtn" onclick="switchSystem('eng')" class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition bg-emerald-600 text-white shadow">
           🏛️ 工程聯繫資料
         </button>
       </div>
@@ -46,7 +46,7 @@
   </header>
 
   <!-- ==================== 子系統 A：採購廠商聯絡方式 ==================== -->
-  <div id="sysVendorContainer" class="max-w-5xl mx-auto p-4 md:p-6 space-y-4">
+  <div id="sysVendorContainer" class="max-w-5xl mx-auto p-4 md:p-6 space-y-4 hidden">
     
     <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-2">
       <div class="text-sm font-bold text-slate-700 flex items-center gap-1.5">
@@ -273,7 +273,7 @@
 
 
   <!-- ==================== 子系統 B：工程聯繫資料 ==================== -->
-  <div id="sysEngContainer" class="max-w-5xl mx-auto p-4 md:p-6 space-y-4 hidden">
+  <div id="sysEngContainer" class="max-w-5xl mx-auto p-4 md:p-6 space-y-4">
     
     <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-3">
       <div class="flex flex-wrap items-center gap-1.5">
@@ -284,7 +284,7 @@
         <button id="engTab_siteQuery" onclick="switchEngCategory('siteQuery')" class="eng-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-blue-50 text-blue-700 border border-blue-200">🏗️ 案場工程查詢</button>
       </div>
       <button onclick="prepareCreateNewEng()" class="bg-emerald-600 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-500 transition flex items-center gap-1">
-        <span>➕</span> 建立 / 修改資料
+        <span id="createBtnIcon">➕</span> <span id="createBtnText">建立 / 修改主辦機關</span>
       </button>
     </div>
 
@@ -386,6 +386,27 @@
             </div>
           </div>
 
+          <!-- 主辦機關與監造單位的獨立帳戶資訊與照片專區 -->
+          <div id="mainAccountSection" class="bg-blue-50/70 p-4 rounded-xl border border-blue-200 space-y-3">
+            <h4 class="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+              <span>💳</span> 單位帳戶資訊與帳戶照片 (主辦 / 監造專用)
+            </h4>
+            <div class="grid grid-cols-1 gap-2">
+              <label class="block text-xs font-semibold text-slate-600">帳戶資訊說明</label>
+              <textarea id="eMainAccountInfo" rows="3" class="w-full border border-blue-300 rounded p-2 text-sm bg-white" placeholder="請填寫銀行代號、分行、戶名、帳號..."></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">上傳帳戶照片 (存摺封面/截圖)</label>
+              <div class="border border-dashed border-blue-300 rounded-lg p-3 text-center bg-white">
+                <input type="file" id="eMainAccountPhotoInput" accept="image/*" class="text-xs mb-2" onchange="handleMainAccountPhotoUpload(event)">
+                <div class="relative cursor-pointer" onclick="openLightbox(currentMainAccountPhotoBase64)">
+                  <img id="eMainAccountPhotoPreview" class="max-h-36 rounded shadow-sm hidden border mx-auto object-contain bg-white" alt="帳戶照片預覽">
+                </div>
+                <button type="button" id="eMainAccountPhotoDelBtn" onclick="removeMainAccountPhoto()" class="text-xs text-red-600 hover:text-red-800 bg-red-50 border border-red-200 rounded px-2 py-1 mt-2 hidden font-medium">✕ 移除帳戶照片</button>
+              </div>
+            </div>
+          </div>
+
           <!-- 動態無限新增聯絡人清單 -->
           <div class="space-y-3 pt-2 border-t border-slate-200">
             <div class="flex justify-between items-center">
@@ -444,9 +465,11 @@
     let currentVendorCardBase64 = "";
     let currentEngEditId = null;
     let currentEngCardBase64 = "";
+    let currentMainAccountPhotoBase64 = "";
     let activeEngCategory = "主辦機關";
     
     let contactCardBase64Map = {};
+    let accountPhotoBase64Map = {};
 
     function updateContactCardNumbers(containerId) {
       const container = document.getElementById(containerId);
@@ -463,6 +486,9 @@
 
     function getSinglePersonHtml(uniqueId, data = {}) {
       const isActive = data.isActive !== undefined ? data.isActive : "es";
+      const isLab = activeEngCategory === '實驗室';
+      const dutyLabel = isLab ? '試驗項目' : '負責項目';
+      const showPersonAccount = (activeEngCategory === '實驗室' || activeEngCategory === '公家機關');
 
       return `
         <div id="personRow_${uniqueId}" class="bg-white p-3 rounded-lg border border-slate-300 shadow-sm space-y-2 relative person-row-item mb-2" data-puid="${uniqueId}">
@@ -504,10 +530,27 @@
               <div><label class="block text-[10px] text-slate-500 mb-0.5">分機</label><input type="text" id="ext_${uniqueId}" value="${data.ext || ''}" placeholder="分機" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
               <div><label class="block text-[10px] text-slate-500 mb-0.5">傳真</label><input type="text" id="fax_${uniqueId}" value="${data.fax || ''}" placeholder="傳真" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
             </div>
+            
+            <!-- 負責項目 / 試驗項目 (加大版面) -->
             <div class="pt-1">
-              <label class="block text-[10px] text-slate-500 mb-0.5">負責項目</label>
-              <input type="text" id="duty_${uniqueId}" value="${data.duty || ''}" placeholder="負責項目" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white">
+              <label class="block text-[10px] text-slate-500 mb-0.5">${dutyLabel}</label>
+              <textarea id="duty_${uniqueId}" rows="4" placeholder="請詳細填寫${dutyLabel}..." class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white">${data.duty || ''}</textarea>
             </div>
+
+            <!-- 帳戶資訊與帳戶照片 (僅實驗室與公家機關之聯絡人顯示) -->
+            <div class="pt-1 bg-blue-50/50 p-3 rounded-lg border border-blue-100 space-y-2 ${showPersonAccount ? '' : 'hidden'}">
+              <label class="block text-xs font-bold text-blue-900 mb-1">💳 聯絡人帳戶資訊與帳戶照片</label>
+              <textarea id="accountInfo_${uniqueId}" rows="3" placeholder="請填寫銀行代號、分行、戶名、帳號等完整資訊..." class="w-full border border-blue-300 rounded px-2.5 py-1.5 text-xs bg-white font-medium">${data.accountInfo || ''}</textarea>
+              <div class="flex flex-wrap items-center gap-3 pt-1 bg-white p-2 rounded border border-blue-200">
+                <label class="text-xs text-slate-700 font-semibold">🖼️ 上傳帳戶照片：</label>
+                <input type="file" id="accountPhotoInput_${uniqueId}" accept="image/*" class="text-xs text-slate-500 cursor-pointer" onchange="handleAccountPhotoUpload(event, '${uniqueId}')">
+                <div class="relative cursor-pointer" onclick="openLightbox(accountPhotoBase64Map['${uniqueId}'])" title="點擊放大檢視帳戶照片">
+                  <img id="accountPhotoPreview_${uniqueId}" class="h-14 max-w-[160px] rounded shadow-sm ${data.accountPhoto ? '' : 'hidden'} border bg-white object-contain hover:ring-2 hover:ring-blue-500 transition" src="${data.accountPhoto || ''}" alt="帳戶照片預覽">
+                </div>
+                <button type="button" id="accountPhotoDelBtn_${uniqueId}" onclick="removeAccountPhoto('${uniqueId}')" class="text-xs text-red-600 hover:text-red-800 bg-red-50 border border-red-200 rounded px-2 py-1 ${data.accountPhoto ? '' : 'hidden'} font-medium">✕ 移除帳戶照片</button>
+              </div>
+            </div>
+
             <div class="pt-1">
               <label class="block text-[10px] text-slate-500 mb-0.5">E-mail</label>
               <input type="text" id="email_${uniqueId}" value="${data.email || ''}" placeholder="E-mail" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white">
@@ -619,6 +662,7 @@
       cardDiv.setAttribute('data-card-uid', uid);
 
       let titleLabel = containerType === 'vendor' ? '聯絡人' : (containerType === 'payment' ? '請款聯絡人' : '👤 聯絡人板塊');
+      const showSiteUnits = (activeEngCategory === '主辦機關' || activeEngCategory === '監造單位');
 
       cardDiv.innerHTML = `
         <div class="flex justify-between items-center border-b pb-1.5">
@@ -634,7 +678,7 @@
           </button>
         </div>
 
-        <div class="space-y-3 bg-emerald-50/40 p-3 rounded-lg border border-emerald-200/60 mt-2 ${containerType === 'eng' ? '' : 'hidden'}">
+        <div class="space-y-3 bg-emerald-50/40 p-3 rounded-lg border border-emerald-200/60 mt-2 ${showSiteUnits ? '' : 'hidden'}">
           <div class="flex justify-between items-center">
             <label class="block text-[11px] font-bold text-emerald-900">📍 此聯絡人板塊負責的案場與對應使用單位清單</label>
             <button type="button" onclick="addSiteWithUnitInputByCardUid('${uid}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] px-2.5 py-1 rounded font-semibold transition">＋ 新增案場與使用單位</button>
@@ -651,13 +695,14 @@
           const puid = pData.puid || ('p_' + Date.now() + '_' + Math.floor(Math.random() * 1000));
           document.getElementById(`personsContainer_${uid}`).insertAdjacentHTML('beforeend', getSinglePersonHtml(puid, pData));
           if (pData.cardImg) contactCardBase64Map[puid] = pData.cardImg;
+          if (pData.accountPhoto) accountPhotoBase64Map[puid] = pData.accountPhoto;
         });
       } else {
         const puid = 'p_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
         document.getElementById(`personsContainer_${uid}`).insertAdjacentHTML('beforeend', getSinglePersonHtml(puid, {}));
       }
 
-      if (containerType === 'eng') {
+      if (containerType === 'eng' && showSiteUnits) {
         let siteUnitsArr = siteUnitsList.length > 0 ? siteUnitsList : (contactDataList[0]?.siteUnits || []);
         if (siteUnitsArr.length === 0 && contactDataList[0]?.siteName) {
           siteUnitsArr = [{ 
@@ -749,6 +794,74 @@
       if (input) { input.value = ""; }
       const delBtn = document.getElementById(`cardDelBtn_${uniqueId}`);
       if (delBtn) { delBtn.classList.add('hidden'); }
+    }
+
+    function handleAccountPhotoUpload(event, uniqueId) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          let w = img.width, h = img.height;
+          const maxDim = 800;
+          if (w > h && w > maxDim) { h *= maxDim / w; w = maxDim; }
+          else if (h >= w && h > maxDim) { w *= maxDim / h; h = maxDim; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const base64 = canvas.toDataURL('image/jpeg', 0.75);
+          accountPhotoBase64Map[uniqueId] = base64;
+          const prev = document.getElementById(`accountPhotoPreview_${uniqueId}`);
+          if (prev) { prev.src = base64; prev.classList.remove('hidden'); }
+          const delBtn = document.getElementById(`accountPhotoDelBtn_${uniqueId}`);
+          if (delBtn) { delBtn.classList.remove('hidden'); }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeAccountPhoto(uniqueId) {
+      delete accountPhotoBase64Map[uniqueId];
+      const prev = document.getElementById(`accountPhotoPreview_${uniqueId}`);
+      if (prev) { prev.src = ""; prev.classList.add('hidden'); }
+      const input = document.getElementById(`accountPhotoInput_${uniqueId}`);
+      if (input) { input.value = ""; }
+      const delBtn = document.getElementById(`accountPhotoDelBtn_${uniqueId}`);
+      if (delBtn) { delBtn.classList.add('hidden'); }
+    }
+
+    function handleMainAccountPhotoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          let w = img.width, h = img.height;
+          const maxDim = 900;
+          if (w > h && w > maxDim) { h *= maxDim / w; w = maxDim; }
+          else if (h >= w && h > maxDim) { w *= maxDim / h; h = maxDim; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          currentMainAccountPhotoBase64 = canvas.toDataURL('image/jpeg', 0.75);
+          const prev = document.getElementById('eMainAccountPhotoPreview');
+          prev.src = currentMainAccountPhotoBase64; prev.classList.remove('hidden');
+          document.getElementById('eMainAccountPhotoDelBtn').classList.remove('hidden');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeMainAccountPhoto() {
+      currentMainAccountPhotoBase64 = "";
+      const prev = document.getElementById('eMainAccountPhotoPreview');
+      prev.src = ""; prev.classList.add('hidden');
+      document.getElementById('eMainAccountPhotoInput').value = "";
+      document.getElementById('eMainAccountPhotoDelBtn').classList.add('hidden');
     }
 
     function updateBadge(status, text) {
@@ -875,6 +988,12 @@
         activeBtn.className = "eng-tab-btn active px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-emerald-600 text-white shadow";
       }
 
+      const createBtnText = document.getElementById('createBtnText');
+      if (createBtnText) {
+        if (cat === 'siteQuery') createBtnText.innerText = "建立 / 修改資料";
+        else createBtnText.innerText = `建立 / 修改${cat}`;
+      }
+
       if (cat === 'siteQuery') {
         document.getElementById('viewEngQuery').classList.add('hidden');
         document.getElementById('viewEngSiteQuery').classList.remove('hidden');
@@ -981,6 +1100,7 @@
       currentVendorEditId = null;
       currentVendorCardBase64 = "";
       contactCardBase64Map = {};
+      accountPhotoBase64Map = {};
       document.getElementById('vendorForm').reset();
       document.getElementById('vendorContactsContainer').innerHTML = '';
       document.getElementById('paymentContactsContainer').innerHTML = '';
@@ -1032,6 +1152,8 @@
             ext: document.getElementById(`ext_${puid}`)?.value.trim() || '',
             fax: document.getElementById(`fax_${puid}`)?.value.trim() || '',
             duty: document.getElementById(`duty_${puid}`)?.value.trim() || '',
+            accountInfo: document.getElementById(`accountInfo_${puid}`)?.value.trim() || '',
+            accountPhoto: accountPhotoBase64Map[puid] || '',
             email: document.getElementById(`email_${puid}`)?.value.trim() || '',
             address: document.getElementById(`address_${puid}`)?.value.trim() || '',
             remark: document.getElementById(`remark_${puid}`)?.value.trim() || '',
@@ -1062,6 +1184,8 @@
             ext: document.getElementById(`ext_${puid}`)?.value.trim() || '',
             fax: document.getElementById(`fax_${puid}`)?.value.trim() || '',
             duty: document.getElementById(`duty_${puid}`)?.value.trim() || '',
+            accountInfo: document.getElementById(`accountInfo_${puid}`)?.value.trim() || '',
+            accountPhoto: accountPhotoBase64Map[puid] || '',
             email: document.getElementById(`email_${puid}`)?.value.trim() || '',
             address: document.getElementById(`address_${puid}`)?.value.trim() || '',
             remark: document.getElementById(`remark_${puid}`)?.value.trim() || '',
@@ -1122,6 +1246,7 @@
       if (!v) return;
       currentVendorEditId = v.id;
       contactCardBase64Map = {};
+      accountPhotoBase64Map = {};
 
       document.getElementById('formModeTag').innerText = "修改廠商";
       document.getElementById('formTitle').innerText = `修改廠商：${v.name}`;
@@ -1330,15 +1455,27 @@
     function prepareCreateNewEng() {
       currentEngEditId = null;
       currentEngCardBase64 = "";
+      currentMainAccountPhotoBase64 = "";
       contactCardBase64Map = {};
+      accountPhotoBase64Map = {};
       document.getElementById('engForm').reset();
       document.getElementById('engContactsContainer').innerHTML = '';
       addEngContactCard();
       document.getElementById('eCategory').value = activeEngCategory;
-      document.getElementById('engFormModeTag').innerText = "新增工程聯繫";
-      document.getElementById('engFormTitle').innerText = "建立工程聯繫資料";
+      document.getElementById('engFormModeTag').innerText = `新增${activeEngCategory}`;
+      document.getElementById('engFormTitle').innerText = `建立${activeEngCategory}資料`;
       document.getElementById('deleteEngBtn').classList.add('hidden');
       document.getElementById('eCardPreview').classList.add('hidden');
+      document.getElementById('eMainAccountPhotoPreview').classList.add('hidden');
+      document.getElementById('eMainAccountPhotoDelBtn').classList.add('hidden');
+      
+      const mainAccSec = document.getElementById('mainAccountSection');
+      if (activeEngCategory === '主辦機關' || activeEngCategory === '監造單位') {
+        mainAccSec.classList.remove('hidden');
+      } else {
+        mainAccSec.classList.add('hidden');
+      }
+
       switchEngView('edit');
     }
 
@@ -1372,6 +1509,8 @@
             ext: document.getElementById(`ext_${puid}`)?.value.trim() || '',
             fax: document.getElementById(`fax_${puid}`)?.value.trim() || '',
             duty: document.getElementById(`duty_${puid}`)?.value.trim() || '',
+            accountInfo: document.getElementById(`accountInfo_${puid}`)?.value.trim() || '',
+            accountPhoto: accountPhotoBase64Map[puid] || '',
             email: document.getElementById(`email_${puid}`)?.value.trim() || '',
             address: document.getElementById(`address_${puid}`)?.value.trim() || '',
             remark: document.getElementById(`remark_${puid}`)?.value.trim() || '',
@@ -1414,6 +1553,8 @@
         companyAddress2: document.getElementById('eCompanyAddress2').value.trim(),
         docAddress1: document.getElementById('eDocAddress1').value.trim(),
         docAddress2: document.getElementById('eDocAddress2').value.trim(),
+        mainAccountInfo: document.getElementById('eMainAccountInfo')?.value.trim() || '',
+        mainAccountPhoto: currentMainAccountPhotoBase64,
         contacts: contactsObj,
         projectName: projectName,
         remark: document.getElementById('eRemark').value.trim(),
@@ -1441,8 +1582,9 @@
       if (!item) return;
       currentEngEditId = item.id;
       contactCardBase64Map = {};
+      accountPhotoBase64Map = {};
 
-      document.getElementById('engFormModeTag').innerText = "修改工程聯繫";
+      document.getElementById('engFormModeTag').innerText = `修改${item.category || '工程聯繫'}`;
       document.getElementById('engFormTitle').innerText = `修改：${item.name}`;
       document.getElementById('deleteEngBtn').classList.remove('hidden');
 
@@ -1458,6 +1600,25 @@
       document.getElementById('eDocAddress1').value = item.docAddress1 || '';
       document.getElementById('eDocAddress2').value = item.docAddress2 || '';
       
+      const mainAccSec = document.getElementById('mainAccountSection');
+      if (item.category === '主辦機關' || item.category === '監造單位') {
+        mainAccSec.classList.remove('hidden');
+        document.getElementById('eMainAccountInfo').value = item.mainAccountInfo || '';
+        currentMainAccountPhotoBase64 = item.mainAccountPhoto || '';
+        const photoPrev = document.getElementById('eMainAccountPhotoPreview');
+        const photoDel = document.getElementById('eMainAccountPhotoDelBtn');
+        if (currentMainAccountPhotoBase64) {
+          photoPrev.src = currentMainAccountPhotoBase64;
+          photoPrev.classList.remove('hidden');
+          photoDel.classList.remove('hidden');
+        } else {
+          photoPrev.classList.add('hidden');
+          photoDel.classList.add('hidden');
+        }
+      } else {
+        mainAccSec.classList.add('hidden');
+      }
+
       const contacts = item.contacts || {};
       const contactKeys = Object.keys(contacts);
       if (contactKeys.length > 0) {
@@ -1565,33 +1726,45 @@
           if (it.fax) infoHtml += `<p>📠 傳真：${it.fax}</p>`;
           if (it.companyAddress1) infoHtml += `<p class="md:col-span-2">🏢 公司地址(1)：${it.companyAddress1}</p>`;
           if (it.docAddress1) infoHtml += `<p class="md:col-span-2 text-blue-700 font-medium">✉️ 文件寄送(1)：${it.docAddress1}</p>`;
+          
+          if ((activeEngCategory === '主辦機關' || activeEngCategory === '監造單位') && (it.mainAccountInfo || it.mainAccountPhoto)) {
+            infoHtml += `
+              <div class="md:col-span-2 bg-blue-50 p-2.5 rounded border border-blue-200 mt-1">
+                <p class="font-bold text-blue-900">💳 單位帳戶資訊：${it.mainAccountInfo || '未填寫'}</p>
+                ${it.mainAccountPhoto ? `<div class="mt-1"><button onclick="openLightbox('${it.mainAccountPhoto}')" class="text-[11px] text-blue-600 underline font-medium">🖼️ 查看單位帳戶照片</button></div>` : ''}
+              </div>
+            `;
+          }
 
-          // 收集所有使用單位與公司聯絡人，將同一個使用單位合併整合，避免重複渲染
           const siteUnitMap = {};
           const contacts = it.contacts || {};
-          
+          const showSiteUnits = (activeEngCategory === '主辦機關' || activeEngCategory === '監造單位');
+          const isLab = activeEngCategory === '實驗室';
+          const dutyLabel = isLab ? '試驗項目' : '負責項目';
+          const showPersonAccount = (activeEngCategory === '實驗室' || activeEngCategory === '公家機關');
+
           Object.values(contacts).forEach(cObj => {
             const persons = cObj.persons || [];
             const siteUnitsArr = cObj.siteUnits || [];
 
-            // 針對該板塊定義的使用單位歸納
-            siteUnitsArr.forEach(su => {
-              let suKey = (su.useName || '未分類使用單位').trim();
-              if (!siteUnitMap[suKey]) {
-                siteUnitMap[suKey] = { siteInfo: su, companies: {} };
-              }
-              
-              persons.forEach(c => {
-                let compName = (c.personCompany || '未分類公司/單位').trim();
-                if (!siteUnitMap[suKey].companies[compName]) {
-                  siteUnitMap[suKey].companies[compName] = [];
+            if (showSiteUnits) {
+              siteUnitsArr.forEach(su => {
+                let suKey = (su.useName || '未分類使用單位').trim();
+                if (!siteUnitMap[suKey]) {
+                  siteUnitMap[suKey] = { siteInfo: su, companies: {} };
                 }
-                siteUnitMap[suKey].companies[compName].push(c);
+                
+                persons.forEach(c => {
+                  let compName = (c.personCompany || '未分類公司/單位').trim();
+                  if (!siteUnitMap[suKey].companies[compName]) {
+                    siteUnitMap[suKey].companies[compName] = [];
+                  }
+                  siteUnitMap[suKey].companies[compName].push(c);
+                });
               });
-            });
+            }
 
-            // 若該板塊有填聯絡人但沒特別填使用單位時的備用處理
-            if (siteUnitsArr.length === 0) {
+            if (!showSiteUnits || siteUnitsArr.length === 0) {
               let suKey = '相關單位';
               if (!siteUnitMap[suKey]) {
                 siteUnitMap[suKey] = { siteInfo: {}, companies: {} };
@@ -1632,6 +1805,9 @@
                           ${c.ext ? `<span>分機: ${c.ext}</span>` : ''}
                         </div>
                       </div>
+                      ${c.duty ? `<div class="text-slate-600 whitespace-pre-line mt-1">${dutyLabel}：${c.duty}</div>` : ''}
+                      ${showPersonAccount && c.accountInfo ? `<div class="text-blue-800 font-medium mt-1">💳 帳戶資訊：${c.accountInfo}</div>` : ''}
+                      ${showPersonAccount && c.accountPhoto ? `<div class="mt-1"><button onclick="openLightbox('${c.accountPhoto}')" class="text-[11px] text-blue-600 underline font-medium">🖼️ 查看帳戶照片</button></div>` : ''}
                       ${c.remark ? `<div class="text-slate-500 italic mt-1">備註：${c.remark}</div>` : ''}
                     </div>
                   `;
@@ -1639,13 +1815,16 @@
                   personsListHtml += `
                     <div class="bg-white p-2.5 rounded border border-slate-200 text-xs space-y-1.5 mb-1">
                       <div class="flex flex-wrap gap-2 items-center justify-between border-b pb-1">
-                        <div><span class="font-bold text-slate-800 text-sm">👤 ${c.name}</span> ${c.title ? `(${c.title})` : ''} ${c.duty ? `- <span class="text-emerald-700">${c.duty}</span>` : ''}</div>
+                        <div><span class="font-bold text-slate-800 text-sm">👤 ${c.name}</span> ${c.title ? `(${c.title})` : ''}</div>
                         <div class="space-x-2 text-slate-600">
                           ${c.mobile ? `<span>📱 <a href="tel:${c.mobile}" class="text-emerald-600 font-medium">${c.mobile}</a></span>` : ''}
                           ${c.tel ? `<span>📞 <a href="tel:${c.tel}" class="text-emerald-600 font-medium">${c.tel}</a></span>` : ''}
                           ${c.ext ? `<span>分機: ${c.ext}</span>` : ''}
                         </div>
                       </div>
+                      ${c.duty ? `<div class="text-slate-700 whitespace-pre-line">${dutyLabel}：${c.duty}</div>` : ''}
+                      ${showPersonAccount && c.accountInfo ? `<div class="text-blue-800 font-medium">💳 帳戶資訊：${c.accountInfo}</div>` : ''}
+                      ${showPersonAccount && c.accountPhoto ? `<div><button onclick="openLightbox('${c.accountPhoto}')" class="text-[11px] text-blue-600 underline font-medium">🖼️ 查看帳戶照片</button></div>` : ''}
                       ${c.email ? `<p class="text-slate-500">✉️ E-mail: ${c.email}</p>` : ''}
                       ${c.remark ? `<p class="text-slate-500 italic">備註：${c.remark}</p>` : ''}
                       ${c.cardImg ? `<div><button onclick="openLightbox('${c.cardImg}')" class="text-[11px] text-emerald-600 underline font-medium">📇 查看聯絡人名片</button></div>` : ''}
@@ -1665,7 +1844,7 @@
             });
 
             let unitHeaderHtml = '';
-            if (su.useName || su.useTel || su.useAddress) {
+            if (showSiteUnits && (su.useName || su.useTel || su.useAddress)) {
               unitHeaderHtml = `
                 <div class="bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-200 mb-3 text-slate-700 space-y-0.5">
                   <p class="font-bold text-emerald-900">🏢 使用單位：${su.useName || ''} ${su.useContact ? `(${su.useContact})` : ''}</p>
@@ -1693,7 +1872,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-1 text-xs text-slate-600">
               ${infoHtml}
             </div>
-            ${siteUnitHtml ? `<div class="space-y-2 pt-2 border-t"><p class="text-[11px] font-semibold text-slate-500">本案場使用單位與各公司聯絡人分類：</p>${siteUnitHtml}</div>` : ''}
+            ${siteUnitHtml ? `<div class="space-y-2 pt-2 border-t"><p class="text-[11px] font-semibold text-slate-500">本案場相關聯絡人與公司分類：</p>${siteUnitHtml}</div>` : ''}
           `;
           card.appendChild(inner);
         });
