@@ -175,7 +175,7 @@
             <button type="button" onclick="switchSubTab('subtab-sites')" class="tab-btn px-4 py-2 text-slate-500 whitespace-nowrap">使用案場</button>
           </div>
 
-          <!-- 分頁 1: 基本資料 (全新 5 行排版) -->
+          <!-- 分頁 1: 基本資料 (精準 5 行排版 + 獨立名片) -->
           <div id="subtab-basic" class="subtab-content space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div><label class="block text-xs text-slate-600 mb-1">廠商市話</label><input type="text" id="vTel" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm"></div>
@@ -185,7 +185,7 @@
 
             <div class="space-y-3 pt-2 border-t border-slate-200">
               <div class="flex justify-between items-center">
-                <h4 class="text-xs font-bold text-slate-700">👤 廠商聯絡人清單 (5 行精準排版，可無限新增)</h4>
+                <h4 class="text-xs font-bold text-slate-700">👤 廠商聯絡人清單 (含各自名片，可無限新增)</h4>
                 <button type="button" onclick="addVendorContactCard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg shadow font-semibold transition flex items-center gap-1">
                   <span>➕</span> 新增一位廠商聯絡人
                 </button>
@@ -200,7 +200,7 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
               <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">名片圖檔 (點擊放大 🔍)</label>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">主公司名片圖檔 (點擊放大 🔍)</label>
                 <div class="border border-dashed border-slate-300 rounded-lg p-3 text-center bg-slate-50">
                   <input type="file" id="vCardInput" accept="image/*" class="text-xs mb-2" onchange="handleCardUpload(event, 'vendor')">
                   <div class="relative cursor-pointer" onclick="openLightbox(currentVendorCardBase64)">
@@ -220,7 +220,7 @@
             </div>
           </div>
 
-          <!-- 分頁 2: 請款資訊 (全新 5 行排版) -->
+          <!-- 分頁 2: 請款資訊 (精準 5 行排版 + 獨立名片) -->
           <div id="subtab-payment" class="subtab-content hidden space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div><label class="block text-xs text-slate-600 mb-1">負責人</label><input type="text" id="pOwner" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm"></div>
@@ -237,7 +237,7 @@
             <div class="space-y-3 pt-2 border-t border-slate-200 mt-2">
               <div class="flex justify-between items-center">
                 <h4 class="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-                  <span>💼</span> 請款聯絡人清單 (5 行精準排版，可無限新增)
+                  <span>💼</span> 請款聯絡人清單 (含各自名片，可無限新增)
                 </h4>
                 <button type="button" onclick="addPaymentContactCard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg shadow font-semibold transition flex items-center gap-1">
                   <span>➕</span> 新增一位請款聯絡人
@@ -318,7 +318,7 @@
       <div id="engSiteResultContainer" class="space-y-4"></div>
     </section>
 
-    <!-- 工程建立/修改表單視圖 (全新 5 行排版) -->
+    <!-- 工程建立/修改表單視圖 (精準 5 行排版) -->
     <section id="viewEngEdit" class="hidden">
       <div class="bg-white p-5 md:p-7 rounded-2xl shadow-sm border border-slate-200">
         <div class="flex justify-between items-center pb-4 mb-4 border-b border-slate-200">
@@ -386,7 +386,7 @@
             </div>
           </div>
 
-          <!-- 動態無限新增聯絡人清單 (全新 5 行排版) -->
+          <!-- 動態無限新增聯絡人清單 (精準 5 行排版) -->
           <div class="space-y-3 pt-2 border-t border-slate-200">
             <div class="flex justify-between items-center">
               <h4 class="text-xs font-bold text-slate-700">👤 工程聯絡人清單 (每位聯絡人可設定各自負責的案場與使用單位)</h4>
@@ -443,7 +443,10 @@
     let currentVendorEditId = null;
     let currentVendorCardBase64 = "";
     let vendorContactCount = 0;
+    let vendorContactCardMap = {};
+
     let paymentContactCount = 0;
+    let paymentContactCardMap = {};
 
     let currentEngEditId = null;
     let currentEngCardBase64 = "";
@@ -451,7 +454,7 @@
     let engContactCount = 0;
     let contactCardBase64Map = {};
 
-    // 依您指定的全新 5 行排版 HTML 產生器
+    // 精準 5 行排版 HTML 產生器
     function getContactHtml(prefix, index, data = {}) {
       return `
         <!-- 第 1 行：姓名、職稱、統編、Line 名稱 -->
@@ -502,8 +505,43 @@
           <button type="button" onclick="document.getElementById('vendorContactCard_${index}').remove()" class="text-red-500 hover:text-red-700 text-xs px-2 py-0.5 rounded bg-red-50 border border-red-200">✕ 刪除</button>
         </div>
         ${getContactHtml('vc', index, data)}
+        <div class="flex items-center gap-3 pt-1">
+          <label class="text-[11px] text-slate-600 font-medium">📇 聯絡人名片：</label>
+          <input type="file" id="vc_${index}_CardInput" accept="image/*" class="text-xs text-slate-500" onchange="handleVendorContactCardUpload(event, ${index})">
+          <div class="relative cursor-pointer" onclick="openLightbox(vendorContactCardMap[${index}])">
+            <img id="vc_${index}_CardPreview" class="h-10 rounded shadow-sm ${data.cardImg ? '' : 'hidden'} border bg-white object-contain" src="${data.cardImg || ''}" alt="名片預覽">
+          </div>
+        </div>
       `;
       container.appendChild(cardDiv);
+
+      if (data.cardImg) {
+        vendorContactCardMap[index] = data.cardImg;
+      }
+    }
+
+    function handleVendorContactCardUpload(event, index) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          let w = img.width, h = img.height;
+          const maxDim = 800;
+          if (w > h && w > maxDim) { h *= maxDim / w; w = maxDim; }
+          else if (h >= w && h > maxDim) { w *= maxDim / h; h = maxDim; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const base64 = canvas.toDataURL('image/jpeg', 0.75);
+          vendorContactCardMap[index] = base64;
+          const prev = document.getElementById(`vc_${index}_CardPreview`);
+          if (prev) { prev.src = base64; prev.classList.remove('hidden'); }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
     }
 
     function addPaymentContactCard(data = {}) {
@@ -522,8 +560,43 @@
           <button type="button" onclick="document.getElementById('paymentContactCard_${index}').remove()" class="text-red-500 hover:text-red-700 text-xs px-2 py-0.5 rounded bg-red-50 border border-red-200">✕ 刪除</button>
         </div>
         ${getContactHtml('pc', index, data)}
+        <div class="flex items-center gap-3 pt-1">
+          <label class="text-[11px] text-slate-600 font-medium">📇 請款聯絡人名片：</label>
+          <input type="file" id="pc_${index}_CardInput" accept="image/*" class="text-xs text-slate-500" onchange="handlePaymentContactCardUpload(event, ${index})">
+          <div class="relative cursor-pointer" onclick="openLightbox(paymentContactCardMap[${index}])">
+            <img id="pc_${index}_CardPreview" class="h-10 rounded shadow-sm ${data.cardImg ? '' : 'hidden'} border bg-white object-contain" src="${data.cardImg || ''}" alt="名片預覽">
+          </div>
+        </div>
       `;
       container.appendChild(cardDiv);
+
+      if (data.cardImg) {
+        paymentContactCardMap[index] = data.cardImg;
+      }
+    }
+
+    function handlePaymentContactCardUpload(event, index) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          let w = img.width, h = img.height;
+          const maxDim = 800;
+          if (w > h && w > maxDim) { h *= maxDim / w; w = maxDim; }
+          else if (h >= w && h > maxDim) { w *= maxDim / h; h = maxDim; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const base64 = canvas.toDataURL('image/jpeg', 0.75);
+          paymentContactCardMap[index] = base64;
+          const prev = document.getElementById(`pc_${index}_CardPreview`);
+          if (prev) { prev.src = base64; prev.classList.remove('hidden'); }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
     }
 
     function addEngContactCard(data = {}) {
@@ -854,6 +927,8 @@
       currentVendorCardBase64 = "";
       vendorContactCount = 0;
       paymentContactCount = 0;
+      vendorContactCardMap = {};
+      paymentContactCardMap = {};
       document.getElementById('vendorForm').reset();
       document.getElementById('vendorContactsContainer').innerHTML = '';
       document.getElementById('paymentContactsContainer').innerHTML = '';
@@ -868,14 +943,6 @@
       refreshCategoryOptions();
       switchSubTab('subtab-basic');
       switchVendorView('edit');
-    }
-
-    function switchSubTab(tabId) {
-      document.querySelectorAll('.subtab-content').forEach(el => el.classList.add('hidden'));
-      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-      document.getElementById(tabId).classList.remove('hidden');
-      const btn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
-      if (btn) btn.classList.add('active');
     }
 
     function saveVendor(e) {
@@ -902,7 +969,8 @@
           fax: document.getElementById(`vc_${index}_Fax`)?.value.trim() || '',
           duty: document.getElementById(`vc_${index}_Duty`)?.value.trim() || '',
           email: document.getElementById(`vc_${index}_Email`)?.value.trim() || '',
-          address: document.getElementById(`vc_${index}_Address`)?.value.trim() || ''
+          address: document.getElementById(`vc_${index}_Address`)?.value.trim() || '',
+          cardImg: vendorContactCardMap[index] || ''
         };
       });
 
@@ -924,7 +992,8 @@
           fax: document.getElementById(`pc_${index}_Fax`)?.value.trim() || '',
           duty: document.getElementById(`pc_${index}_Duty`)?.value.trim() || '',
           email: document.getElementById(`pc_${index}_Email`)?.value.trim() || '',
-          address: document.getElementById(`pc_${index}_Address`)?.value.trim() || ''
+          address: document.getElementById(`pc_${index}_Address`)?.value.trim() || '',
+          cardImg: paymentContactCardMap[index] || ''
         };
       });
 
@@ -993,6 +1062,7 @@
 
       document.getElementById('vendorContactsContainer').innerHTML = '';
       vendorContactCount = 0;
+      vendorContactCardMap = {};
       const contacts = v.contacts || (v.c1 ? { c1: v.c1 } : {});
       const cKeys = Object.keys(contacts);
       if (cKeys.length > 0) {
@@ -1003,6 +1073,7 @@
 
       document.getElementById('paymentContactsContainer').innerHTML = '';
       paymentContactCount = 0;
+      paymentContactCardMap = {};
       const payContacts = v.payment?.contacts || (v.payment?.c1 ? { c1: v.payment.c1 } : {});
       const pKeys = Object.keys(payContacts);
       if (pKeys.length > 0) {
@@ -1045,276 +1116,6 @@
         syncToCloud();
         alert('已刪除');
         switchVendorView('query');
-      }
-    }
-
-    function filterVendors() {
-      const kw = document.getElementById('queryKeyword').value.toLowerCase();
-      const cat = document.getElementById('queryCategory').value;
-      const st = document.getElementById('queryStatus').value;
-
-      const filtered = appData.vendors.filter(v => {
-        const matchKw = !kw || [v.name, v.code, v.taxId, v.workItems, v.tel].some(x => x && x.toLowerCase().includes(kw));
-        const matchCat = !cat || v.category === cat;
-        const matchSt = !st || v.isActive === st;
-        return matchKw && matchCat && matchSt;
-      });
-
-      document.getElementById('resultCount').innerText = `共 ${filtered.length} 筆資料`;
-      const container = document.getElementById('queryResultGroups');
-      container.innerHTML = '';
-      if (filtered.length === 0) {
-        container.innerHTML = '<div class="bg-white p-10 text-center text-slate-400 rounded-2xl border">查無相符廠商資料</div>';
-        return;
-      }
-
-      const grouped = {};
-      filtered.forEach(v => {
-        const c = v.category?.trim() || '未分類';
-        if (!grouped[c]) grouped[c] = [];
-        grouped[c].push(v);
-      });
-
-      Object.keys(grouped).forEach(cName => {
-        const list = grouped[cName];
-        const sec = document.createElement('div');
-        sec.className = "bg-white p-5 rounded-2xl border shadow-sm space-y-3";
-        sec.innerHTML = `
-          <div class="flex items-center gap-2 pb-2 border-b">
-            <span class="w-2 h-5 bg-emerald-600 rounded-full inline-block"></span>
-            <h3 class="font-bold text-slate-800 text-base">${cName}</h3>
-            <span class="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">${list.length} 家</span>
-          </div>
-        `;
-        const grid = document.createElement('div');
-        grid.className = "grid grid-cols-1 md:grid-cols-2 gap-3";
-
-        list.forEach(v => {
-          const card = document.createElement('div');
-          card.className = "bg-slate-50 p-3.5 rounded-xl border flex flex-col justify-between";
-          card.innerHTML = `
-            <div>
-              <div class="flex justify-between items-start">
-                <span class="text-xs bg-white px-2 py-0.5 rounded font-mono border">${v.code || ''}</span>
-                <span class="text-xs ${v.isActive === '是' ? 'text-emerald-600 bg-emerald-100' : 'text-rose-500 bg-rose-100'} px-2 py-0.5 rounded font-bold">${v.isActive === '是' ? '● 配合中' : '✕ 已停止'}</span>
-              </div>
-              <h4 class="font-bold text-slate-800 mt-2">${v.name}</h4>
-              <p class="text-xs text-slate-600 mt-1">施工項目：${v.workItems || '未填寫'}</p>
-              ${v.tel ? `<p class="text-xs text-slate-600 mt-1">📞 市話：<a href="tel:${v.tel}" class="text-emerald-600 font-medium">${v.tel}</a></p>` : ''}
-            </div>
-            <div class="mt-3 pt-2 border-t flex justify-between items-center">
-              ${v.cardImg ? `<button onclick="openLightbox('${v.cardImg}')" class="text-xs text-emerald-600 underline">📇 名片</button>` : '<span></span>'}
-              <button onclick="loadVendorToEdit('${v.id}')" class="bg-slate-800 text-white text-xs px-3 py-1 rounded">✏️ 編輯</button>
-            </div>
-          `;
-          grid.appendChild(card);
-        });
-        sec.appendChild(grid);
-        container.appendChild(sec);
-      });
-    }
-
-    function renderSiteQuery() {
-      const kw = (document.getElementById('siteSearchInput')?.value || '').trim().toLowerCase();
-      const container = document.getElementById('siteResultContainer');
-      const badgesContainer = document.getElementById('siteBadges');
-      container.innerHTML = ''; badgesContainer.innerHTML = '';
-
-      const siteMap = {};
-      appData.vendors.forEach(v => {
-        if (!v.sites) return;
-        v.sites.split('\n').forEach(line => {
-          let clean = line.trim();
-          if (!clean) return;
-          let title = clean.replace(/^[\d\.\\(\)\\s\-]+/, '').trim();
-          if (!siteMap[clean]) siteMap[clean] = { title, vendors: [] };
-          siteMap[clean].vendors.push(v);
-        });
-      });
-
-      Object.keys(siteMap).slice(0, 10).forEach(key => {
-        const item = siteMap[key];
-        const b = document.createElement('button');
-        b.className = "text-xs bg-slate-100 hover:bg-emerald-100 text-slate-700 px-2.5 py-1 rounded-full border";
-        b.innerText = item.title;
-        b.onclick = () => { document.getElementById('siteSearchInput').value = item.title; renderSiteQuery(); };
-        badgesContainer.appendChild(b);
-      });
-
-      const matched = Object.keys(siteMap).filter(k => !kw || k.toLowerCase().includes(kw));
-      if (matched.length === 0) {
-        container.innerHTML = '<div class="bg-white p-10 text-center text-slate-400 rounded-2xl border">查無相符案場紀錄</div>';
-        return;
-      }
-
-      matched.forEach(k => {
-        const data = siteMap[k];
-        const card = document.createElement('div');
-        card.className = "bg-white p-4 rounded-xl border shadow-sm space-y-3";
-        card.innerHTML = `
-          <div class="flex items-center gap-2 border-b pb-2">
-            <span class="w-2 h-5 bg-emerald-600 rounded-full inline-block"></span>
-            <h3 class="font-bold text-slate-800">📍 ${data.title} (${data.vendors.length}家廠商)</h3>
-          </div>
-        `;
-        const g = document.createElement('div');
-        g.className = "grid grid-cols-1 md:grid-cols-2 gap-3";
-        data.vendors.forEach(v => {
-          g.innerHTML += `<div class="bg-slate-50 p-3 rounded border text-xs"><b class="text-slate-800 text-sm">${v.name}</b><p class="text-slate-500 mt-1">項目：${v.workItems || '-'}</p></div>`;
-        });
-        card.appendChild(g);
-        container.appendChild(card);
-      });
-    }
-
-    function prepareCreateNewEng() {
-      currentEngEditId = null;
-      currentEngCardBase64 = "";
-      contactCardBase64Map = {};
-      document.getElementById('engForm').reset();
-      document.getElementById('engContactsContainer').innerHTML = '';
-      engContactCount = 0;
-      addEngContactCard();
-      document.getElementById('eCategory').value = activeEngCategory;
-      document.getElementById('engFormModeTag').innerText = "新增工程聯繫";
-      document.getElementById('engFormTitle').innerText = "建立工程聯繫資料";
-      document.getElementById('deleteEngBtn').classList.add('hidden');
-      document.getElementById('eCardPreview').classList.add('hidden');
-      switchEngView('edit');
-    }
-
-    function saveEngineering(e) {
-      e.preventDefault();
-      const category = document.getElementById('eCategory').value;
-      const name = document.getElementById('eName').value.trim();
-      if (!name) { alert('單位 / 公司名稱為必填'); return; }
-
-      const contactsObj = {};
-      const cardDivs = document.querySelectorAll('#engContactsContainer > div');
-      let allSites = [];
-
-      cardDivs.forEach((div, idx) => {
-        const idMatch = div.id.match(/engContactCard_(\d+)/);
-        if (!idMatch) return;
-        const index = idMatch[1];
-        const key = `c${idx + 1}`;
-
-        const siteUnitRows = div.querySelectorAll('.site-unit-row');
-        const siteUnitsArr = [];
-        siteUnitRows.forEach(row => {
-          const sName = row.querySelector(`.site-name-input-${index}`)?.value.trim() || '';
-          const uName = row.querySelector(`.site-usename-input-${index}`)?.value.trim() || '';
-          const uTel = row.querySelector(`.site-usetel-input-${index}`)?.value.trim() || '';
-          const uContact = row.querySelector(`.site-usecontact-input-${index}`)?.value.trim() || '';
-          const uAddress = row.querySelector(`.site-useaddress-input-${index}`)?.value.trim() || '';
-          if (sName) {
-            siteUnitsArr.push({ siteName: sName, useName: uName, useTel: uTel, useContact: uContact, useAddress: uAddress });
-            allSites.push(sName);
-          }
-        });
-
-        contactsObj[key] = {
-          name: document.getElementById(`ec_${index}_Name`)?.value.trim() || '',
-          title: document.getElementById(`ec_${index}_Title`)?.value.trim() || '',
-          taxId: document.getElementById(`ec_${index}_TaxId`)?.value.trim() || '',
-          mobile: document.getElementById(`ec_${index}_Mobile`)?.value.trim() || '',
-          lineName: document.getElementById(`ec_${index}_LineName`)?.value.trim() || '',
-          tel: document.getElementById(`ec_${index}_Tel`)?.value.trim() || '',
-          ext: document.getElementById(`ec_${index}_Ext`)?.value.trim() || '',
-          fax: document.getElementById(`ec_${index}_Fax`)?.value.trim() || '',
-          duty: document.getElementById(`ec_${index}_Duty`)?.value.trim() || '',
-          email: document.getElementById(`ec_${index}_Email`)?.value.trim() || '',
-          address: document.getElementById(`ec_${index}_Address`)?.value.trim() || '',
-          siteUnits: siteUnitsArr,
-          cardImg: contactCardBase64Map[index] || ''
-        };
-      });
-
-      const projectName = allSites.length > 0 ? allSites.join('、') : (name + ' 相關工程');
-
-      const eData = {
-        id: currentEngEditId || Date.now().toString(),
-        category, name,
-        taxId: document.getElementById('eTaxId').value.trim(),
-        tel: document.getElementById('eTel').value.trim(),
-        fax: document.getElementById('eFax').value.trim(),
-        companyAddress1: document.getElementById('eCompanyAddress1').value.trim(),
-        companyAddress2: document.getElementById('eCompanyAddress2').value.trim(),
-        docAddress1: document.getElementById('eDocAddress1').value.trim(),
-        docAddress2: document.getElementById('eDocAddress2').value.trim(),
-        contacts: contactsObj,
-        projectName: projectName,
-        remark: document.getElementById('eRemark').value.trim(),
-        cardImg: currentEngCardBase64
-      };
-
-      if (!appData.engineering) appData.engineering = [];
-      if (currentEngEditId) {
-        const idx = appData.engineering.findIndex(item => item.id === currentEngEditId);
-        if (idx !== -1) appData.engineering[idx] = eData;
-      } else {
-        appData.engineering.unshift(eData);
-      }
-
-      localStorage.setItem('combined_system_data', JSON.stringify(appData));
-      syncToCloud();
-      alert('工程聯繫資料儲存成功！');
-      switchEngCategory(category);
-      switchEngView('query');
-    }
-
-    function loadEngineeringToEdit(id) {
-      const item = (appData.engineering || []).find(x => x.id === id);
-      if (!item) return;
-      currentEngEditId = item.id;
-      document.getElementById('engFormModeTag').innerText = "修改工程聯繫";
-      document.getElementById('engFormTitle').innerText = `修改：${item.name}`;
-      document.getElementById('deleteEngBtn').classList.remove('hidden');
-
-      document.getElementById('engContactsContainer').innerHTML = '';
-      engContactCount = 0;
-      contactCardBase64Map = {};
-
-      document.getElementById('eCategory').value = item.category || '主辦機關';
-      document.getElementById('eName').value = item.name || '';
-      document.getElementById('eTaxId').value = item.taxId || '';
-      document.getElementById('eTel').value = item.tel || '';
-      document.getElementById('eFax').value = item.fax || '';
-      document.getElementById('eCompanyAddress1').value = item.companyAddress1 || '';
-      document.getElementById('eCompanyAddress2').value = item.companyAddress2 || '';
-      document.getElementById('eDocAddress1').value = item.docAddress1 || '';
-      document.getElementById('eDocAddress2').value = item.docAddress2 || '';
-      
-      const contacts = item.contacts || {};
-      const contactKeys = Object.keys(contacts);
-      if (contactKeys.length > 0) {
-        contactKeys.forEach(k => {
-          addEngContactCard(contacts[k]);
-        });
-      } else if (item.contactPerson) {
-        addEngContactCard({ name: item.contactPerson, tel: item.tel, ext: item.extOrMobile, siteUnits: [{ siteName: item.projectName, useName: item.useUnitName, useTel: item.useUnitTel, useContact: item.useUnitContact, useAddress: item.useUnitAddress }] });
-      } else {
-        addEngContactCard();
-      }
-
-      document.getElementById('eRemark').value = item.remark || '';
-
-      currentEngCardBase64 = item.cardImg || "";
-      const prev = document.getElementById('eCardPreview');
-      if (currentEngCardBase64) { prev.src = currentEngCardBase64; prev.classList.remove('hidden'); }
-      else { prev.classList.add('hidden'); }
-
-      switchEngView('edit');
-    }
-
-    function deleteCurrentEngineering() {
-      if (!currentEngEditId) return;
-      if (confirm('確定刪除此筆工程聯繫資料？')) {
-        appData.engineering = appData.engineering.filter(x => x.id !== currentEngEditId);
-        localStorage.setItem('combined_system_data', JSON.stringify(appData));
-        syncToCloud();
-        alert('已刪除');
-        switchEngView('query');
       }
     }
 
