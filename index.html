@@ -963,7 +963,8 @@
           if (isManual) alert(`同步成功！共有廠商 ${appData.vendors.length} 筆、工程聯繫 ${appData.engineering.length} 筆。`);
           return;
         }
-        updateBadge('online', '雲端連線正常');
+        syncToCloud();
+        updateBadge('online', '已初始化雲端');
       } catch (err) {
         updateBadge('error', '離線暫存模式');
         if (isManual) alert('雲端連線失敗，目前顯示本機快取。');
@@ -1365,198 +1366,6 @@
       switchVendorView('edit');
     }
 
-    function prepareCreateNewEng() {
-      currentEngEditId = null;
-      currentEngCardBase64 = "";
-      currentMainAccountPhotoBase64 = "";
-      contactCardBase64Map = {};
-      accountPhotoBase64Map = {};
-      document.getElementById('engForm').reset();
-      document.getElementById('engContactsContainer').innerHTML = '';
-      document.getElementById('eMainAccountPhotoPreview').classList.add('hidden');
-      document.getElementById('eMainAccountPhotoDelBtn').classList.add('hidden');
-      document.getElementById('eCardPreview').classList.add('hidden');
-      addEngContactCard();
-      document.getElementById('engFormModeTag').innerText = "新增工程聯繫";
-      document.getElementById('engFormTitle').innerText = "建立工程聯繫資料";
-      document.getElementById('deleteEngBtn').classList.add('hidden');
-      
-      const catSel = document.getElementById('eCategory');
-      if (catSel) catSel.value = activeEngCategory !== 'siteQuery' ? activeEngCategory : '主辦機關';
-      
-      switchEngView('edit');
-    }
-
-    function loadEngineeringToEdit(id) {
-      const item = (appData.engineering || []).find(x => x.id === id);
-      if (!item) return;
-      currentEngEditId = item.id;
-      contactCardBase64Map = {};
-      accountPhotoBase64Map = {};
-
-      document.getElementById('engFormModeTag').innerText = "修改工程聯繫";
-      document.getElementById('engFormTitle').innerText = `修改：${item.name}`;
-      document.getElementById('deleteEngBtn').classList.remove('hidden');
-
-      document.getElementById('eCategory').value = item.category || '主辦機關';
-      document.getElementById('eName').value = item.name || '';
-      document.getElementById('eTaxId').value = item.taxId || '';
-      document.getElementById('eTel').value = item.tel || '';
-      document.getElementById('eFax').value = item.fax || '';
-      document.getElementById('eCompanyAddress1').value = item.companyAddress1 || '';
-      document.getElementById('eCompanyAddress2').value = item.companyAddress2 || '';
-      document.getElementById('eDocAddress1').value = item.docAddress1 || '';
-      document.getElementById('eDocAddress2').value = item.docAddress2 || '';
-      document.getElementById('eMainAccountInfo').value = item.mainAccountInfo || '';
-      document.getElementById('eRemark').value = item.remark || '';
-
-      currentMainAccountPhotoBase64 = item.mainAccountPhoto || "";
-      const accPrev = document.getElementById('eMainAccountPhotoPreview');
-      if (currentMainAccountPhotoBase64) {
-        accPrev.src = currentMainAccountPhotoBase64;
-        accPrev.classList.remove('hidden');
-        document.getElementById('eMainAccountPhotoDelBtn').classList.remove('hidden');
-      } else {
-        accPrev.classList.add('hidden');
-        document.getElementById('eMainAccountPhotoDelBtn').classList.add('hidden');
-      }
-
-      currentEngCardBase64 = item.cardImg || "";
-      const cardPrev = document.getElementById('eCardPreview');
-      if (currentEngCardBase64) {
-        cardPrev.src = currentEngCardBase64;
-        cardPrev.classList.remove('hidden');
-      } else {
-        cardPrev.classList.add('hidden');
-      }
-
-      document.getElementById('engContactsContainer').innerHTML = '';
-      const contacts = item.contacts || {};
-      const contactsArr = Object.values(contacts);
-      if (contactsArr.length > 0) {
-        contactsArr.forEach(cObj => {
-          addEngContactCard({
-            persons: cObj.persons || [],
-            cardUid: cObj.cardUid,
-            siteUnits: cObj.siteUnits || []
-          });
-        });
-      } else {
-        addEngContactCard();
-      }
-
-      switchEngView('edit');
-    }
-
-    function saveEngineering(e) {
-      e.preventDefault();
-      const cat = document.getElementById('eCategory').value;
-      const name = document.getElementById('eName').value.trim();
-      if (!cat || !name) { alert('分類與單位名稱為必填'); return; }
-
-      const contactsObj = {};
-      const cardDivs = document.querySelectorAll('#engContactsContainer > .contact-main-card');
-      cardDivs.forEach((cardDiv, idx) => {
-        const cardUid = cardDiv.getAttribute('data-card-uid');
-        const key = `c${idx + 1}`;
-        const persons = [];
-        
-        cardDiv.querySelectorAll('.person-row-item').forEach(row => {
-          const puid = row.getAttribute('data-puid');
-          const isEsChecked = document.querySelector(`input[name="isActive_${puid}"][value="es"]`)?.checked ?? true;
-          const isActiveVal = isEsChecked ? 'es' : 'no';
-
-          persons.push({
-            puid,
-            personCompany: document.getElementById(`personCompany_${puid}`)?.value.trim() || '',
-            isActive: isActiveVal,
-            name: document.getElementById(`name_${puid}`)?.value.trim() || '',
-            title: document.getElementById(`title_${puid}`)?.value.trim() || '',
-            taxId: document.getElementById(`taxId_${puid}`)?.value.trim() || '',
-            mobile: document.getElementById(`mobile_${puid}`)?.value.trim() || '',
-            lineName: document.getElementById(`lineName_${puid}`)?.value.trim() || '',
-            tel: document.getElementById(`tel_${puid}`)?.value.trim() || '',
-            ext: document.getElementById(`ext_${puid}`)?.value.trim() || '',
-            fax: document.getElementById(`fax_${puid}`)?.value.trim() || '',
-            duty: document.getElementById(`duty_${puid}`)?.value.trim() || '',
-            accountInfo: document.getElementById(`accountInfo_${puid}`)?.value.trim() || '',
-            accountPhoto: accountPhotoBase64Map[puid] || '',
-            email: document.getElementById(`email_${puid}`)?.value.trim() || '',
-            address: document.getElementById(`address_${puid}`)?.value.trim() || '',
-            remark: document.getElementById(`remark_${puid}`)?.value.trim() || '',
-            cardImg: contactCardBase64Map[puid] || ''
-          });
-        });
-
-        const siteUnits = [];
-        cardDiv.querySelectorAll('.site-unit-row').forEach(sRow => {
-          const sNameInput = sRow.querySelector(`[class*="site-name-input-"]`);
-          const useNameInput = sRow.querySelector(`[class*="site-usename-input-"]`);
-          const useTelInput = sRow.querySelector(`[class*="site-usetel-input-"]`);
-          const useExtInput = sRow.querySelector(`[class*="site-useext-input-"]`);
-          const useFaxInput = sRow.querySelector(`[class*="site-usefax-input-"]`);
-          const useContactInput = sRow.querySelector(`[class*="site-usecontact-input-"]`);
-          const useAddressInput = sRow.querySelector(`[class*="site-useaddress-input-"]`);
-
-          siteUnits.push({
-            siteName: sNameInput?.value.trim() || '',
-            useName: useNameInput?.value.trim() || '',
-            useTel: useTelInput?.value.trim() || '',
-            useExt: useExtInput?.value.trim() || '',
-            useFax: useFaxInput?.value.trim() || '',
-            useContact: useContactInput?.value.trim() || '',
-            useAddress: useAddressInput?.value.trim() || ''
-          });
-        });
-
-        contactsObj[key] = { cardUid, persons, siteUnits };
-      });
-
-      const engData = {
-        id: currentEngEditId || Date.now().toString(),
-        category: cat,
-        name,
-        taxId: document.getElementById('eTaxId').value.trim(),
-        tel: document.getElementById('eTel').value.trim(),
-        fax: document.getElementById('eFax').value.trim(),
-        companyAddress1: document.getElementById('eCompanyAddress1').value.trim(),
-        companyAddress2: document.getElementById('eCompanyAddress2').value.trim(),
-        docAddress1: document.getElementById('eDocAddress1').value.trim(),
-        docAddress2: document.getElementById('eDocAddress2').value.trim(),
-        mainAccountInfo: document.getElementById('eMainAccountInfo').value.trim(),
-        mainAccountPhoto: currentMainAccountPhotoBase64,
-        contacts: contactsObj,
-        remark: document.getElementById('eRemark').value.trim(),
-        cardImg: currentEngCardBase64
-      };
-
-      if (!appData.engineering) appData.engineering = [];
-      if (currentEngEditId) {
-        const idx = appData.engineering.findIndex(x => x.id === currentEngEditId);
-        if (idx !== -1) appData.engineering[idx] = engData;
-      } else {
-        appData.engineering.unshift(engData);
-      }
-
-      localStorage.setItem('combined_system_data', JSON.stringify(appData));
-      syncToCloud();
-      alert('工程聯繫資料儲存成功！');
-      switchEngView('query');
-      renderEngList();
-      renderEngSiteQuery();
-    }
-
-    function deleteCurrentEngineering() {
-      if (!currentEngEditId) return;
-      if (confirm('確定刪除此筆工程聯繫資料？')) {
-        appData.engineering = appData.engineering.filter(x => x.id !== currentEngEditId);
-        localStorage.setItem('combined_system_data', JSON.stringify(appData));
-        syncToCloud();
-        alert('已刪除');
-        switchEngView('query');
-      }
-    }
-
     function deleteCurrentVendor() {
       if (!currentVendorEditId) return;
       if (confirm('確定刪除此廠商？')) {
@@ -1737,6 +1546,209 @@
         card.appendChild(g);
         container.appendChild(card);
       });
+    }
+
+    function prepareCreateNewEng() {
+      currentEngEditId = null;
+      currentEngCardBase64 = "";
+      currentMainAccountPhotoBase64 = "";
+      contactCardBase64Map = {};
+      accountPhotoBase64Map = {};
+      document.getElementById('engForm').reset();
+      document.getElementById('engContactsContainer').innerHTML = '';
+      addEngContactCard();
+      document.getElementById('eCategory').value = activeEngCategory;
+      document.getElementById('engFormModeTag').innerText = `新增${activeEngCategory}`;
+      document.getElementById('engFormTitle').innerText = `建立${activeEngCategory}資料`;
+      document.getElementById('deleteEngBtn').classList.add('hidden');
+      document.getElementById('eCardPreview').classList.add('hidden');
+      document.getElementById('eMainAccountPhotoPreview').classList.add('hidden');
+      document.getElementById('eMainAccountPhotoDelBtn').classList.add('hidden');
+      
+      const mainAccSec = document.getElementById('mainAccountSection');
+      if (activeEngCategory === '主辦機關' || activeEngCategory === '監造單位') {
+        mainAccSec.classList.remove('hidden');
+      } else {
+        mainAccSec.classList.add('hidden');
+      }
+
+      switchEngView('edit');
+    }
+
+    function saveEngineering(e) {
+      e.preventDefault();
+      const category = document.getElementById('eCategory').value;
+      const name = document.getElementById('eName').value.trim();
+      if (!name) { alert('單位 / 公司名稱為必填'); return; }
+
+      const contactsObj = {};
+      const cardDivs = document.querySelectorAll('#engContactsContainer > .contact-main-card');
+      let allSites = [];
+
+      cardDivs.forEach((cardDiv, idx) => {
+        const cardUid = cardDiv.getAttribute('data-card-uid');
+        const key = `c${idx + 1}`;
+        const persons = [];
+
+        cardDiv.querySelectorAll('.person-row-item').forEach(row => {
+          const puid = row.getAttribute('data-puid');
+          persons.push({
+            puid,
+            personCompany: document.getElementById(`personCompany_${puid}`)?.value.trim() || '',
+            isActive: document.querySelector(`input[name="isActive_${puid}"]:checked`)?.value || 'es',
+            name: document.getElementById(`name_${puid}`)?.value.trim() || '',
+            title: document.getElementById(`title_${puid}`)?.value.trim() || '',
+            taxId: document.getElementById(`taxId_${puid}`)?.value.trim() || '',
+            mobile: document.getElementById(`mobile_${puid}`)?.value.trim() || '',
+            lineName: document.getElementById(`lineName_${puid}`)?.value.trim() || '',
+            tel: document.getElementById(`tel_${puid}`)?.value.trim() || '',
+            ext: document.getElementById(`ext_${puid}`)?.value.trim() || '',
+            fax: document.getElementById(`fax_${puid}`)?.value.trim() || '',
+            duty: document.getElementById(`duty_${puid}`)?.value.trim() || '',
+            accountInfo: document.getElementById(`accountInfo_${puid}`)?.value.trim() || '',
+            accountPhoto: accountPhotoBase64Map[puid] || '',
+            email: document.getElementById(`email_${puid}`)?.value.trim() || '',
+            address: document.getElementById(`address_${puid}`)?.value.trim() || '',
+            remark: document.getElementById(`remark_${puid}`)?.value.trim() || '',
+            cardImg: contactCardBase64Map[puid] || ''
+          });
+        });
+
+        const siteUnitRows = cardDiv.querySelectorAll('.site-unit-row');
+        const siteUnitsArr = [];
+        siteUnitRows.forEach(row => {
+          const sName = row.querySelector(`.site-name-input-${cardUid}`)?.value.trim() || '';
+          const uName = row.querySelector(`.site-usename-input-${cardUid}`)?.value.trim() || '';
+          const uTel = row.querySelector(`.site-usetel-input-${cardUid}`)?.value.trim() || '';
+          const uExt = row.querySelector(`.site-useext-input-${cardUid}`)?.value.trim() || '';
+          const uFax = row.querySelector(`.site-usefax-input-${cardUid}`)?.value.trim() || '';
+          const uContact = row.querySelector(`.site-usecontact-input-${cardUid}`)?.value.trim() || '';
+          const uAddress = row.querySelector(`.site-useaddress-input-${cardUid}`)?.value.trim() || '';
+          if (sName) {
+            siteUnitsArr.push({ siteName: sName, useName: uName, useTel: uTel, useExt: uExt, useFax: uFax, useContact: uContact, useAddress: uAddress });
+            allSites.push(sName);
+          }
+        });
+
+        contactsObj[key] = {
+          cardUid,
+          persons,
+          siteUnits: siteUnitsArr
+        };
+      });
+
+      const projectName = allSites.length > 0 ? allSites.join('、') : (name + ' 相關工程');
+
+      const eData = {
+        id: currentEngEditId || Date.now().toString(),
+        category, name,
+        taxId: document.getElementById('eTaxId').value.trim(),
+        tel: document.getElementById('eTel').value.trim(),
+        fax: document.getElementById('eFax').value.trim(),
+        companyAddress1: document.getElementById('eCompanyAddress1').value.trim(),
+        companyAddress2: document.getElementById('eCompanyAddress2').value.trim(),
+        docAddress1: document.getElementById('eDocAddress1').value.trim(),
+        docAddress2: document.getElementById('eDocAddress2').value.trim(),
+        mainAccountInfo: document.getElementById('eMainAccountInfo')?.value.trim() || '',
+        mainAccountPhoto: currentMainAccountPhotoBase64,
+        contacts: contactsObj,
+        projectName: projectName,
+        remark: document.getElementById('eRemark').value.trim(),
+        cardImg: currentEngCardBase64
+      };
+
+      if (!appData.engineering) appData.engineering = [];
+      if (currentEngEditId) {
+        const idx = appData.engineering.findIndex(item => item.id === currentEngEditId);
+        if (idx !== -1) appData.engineering[idx] = eData;
+      } else {
+        appData.engineering.unshift(eData);
+      }
+
+      localStorage.setItem('combined_system_data', JSON.stringify(appData));
+      syncToCloud();
+      alert('工程聯繫資料儲存成功！');
+      switchEngCategory(category);
+      switchEngView('query');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function loadEngineeringToEdit(id) {
+      const item = (appData.engineering || []).find(x => x.id === id);
+      if (!item) return;
+      currentEngEditId = item.id;
+      contactCardBase64Map = {};
+      accountPhotoBase64Map = {};
+
+      document.getElementById('engFormModeTag').innerText = `修改${item.category || '工程聯繫'}`;
+      document.getElementById('engFormTitle').innerText = `修改：${item.name}`;
+      document.getElementById('deleteEngBtn').classList.remove('hidden');
+
+      document.getElementById('engContactsContainer').innerHTML = '';
+
+      document.getElementById('eCategory').value = item.category || '主辦機關';
+      document.getElementById('eName').value = item.name || '';
+      document.getElementById('eTaxId').value = item.taxId || '';
+      document.getElementById('eTel').value = item.tel || '';
+      document.getElementById('eFax').value = item.fax || '';
+      document.getElementById('eCompanyAddress1').value = item.companyAddress1 || '';
+      document.getElementById('eCompanyAddress2').value = item.companyAddress2 || '';
+      document.getElementById('eDocAddress1').value = item.docAddress1 || '';
+      document.getElementById('eDocAddress2').value = item.docAddress2 || '';
+      
+      const mainAccSec = document.getElementById('mainAccountSection');
+      if (item.category === '主辦機關' || item.category === '監造單位') {
+        mainAccSec.classList.remove('hidden');
+        document.getElementById('eMainAccountInfo').value = item.mainAccountInfo || '';
+        currentMainAccountPhotoBase64 = item.mainAccountPhoto || '';
+        const photoPrev = document.getElementById('eMainAccountPhotoPreview');
+        const photoDel = document.getElementById('eMainAccountPhotoDelBtn');
+        if (currentMainAccountPhotoBase64) {
+          photoPrev.src = currentMainAccountPhotoBase64;
+          photoPrev.classList.remove('hidden');
+          photoDel.classList.remove('hidden');
+        } else {
+          photoPrev.classList.add('hidden');
+          photoDel.classList.add('hidden');
+        }
+      } else {
+        mainAccSec.classList.add('hidden');
+      }
+
+      const contacts = item.contacts || {};
+      const contactKeys = Object.keys(contacts);
+      if (contactKeys.length > 0) {
+        contactKeys.forEach(k => {
+          const cObj = contacts[k];
+          const persons = cObj.persons || (cObj.name ? [cObj] : []);
+          addEngContactCard({ persons, siteUnits: cObj.siteUnits, cardUid: cObj.cardUid });
+        });
+      } else if (item.contactPerson) {
+        addEngContactCard({ persons: [{ name: item.contactPerson, tel: item.tel, ext: item.extOrMobile }], siteUnits: [{ siteName: item.projectName, useName: item.useUnitName, useTel: item.useUnitTel, useContact: item.useUnitContact, useAddress: item.useUnitAddress }] });
+      } else {
+        addEngContactCard();
+      }
+
+      document.getElementById('eRemark').value = item.remark || '';
+
+      currentEngCardBase64 = item.cardImg || "";
+      const prev = document.getElementById('eCardPreview');
+      if (currentEngCardBase64) { prev.src = currentEngCardBase64; prev.classList.remove('hidden'); }
+      else { prev.classList.add('hidden'); }
+
+      switchEngView('edit');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function deleteCurrentEngineering() {
+      if (!currentEngEditId) return;
+      if (confirm('確定刪除此筆工程聯繫資料？')) {
+        appData.engineering = appData.engineering.filter(x => x.id !== currentEngEditId);
+        localStorage.setItem('combined_system_data', JSON.stringify(appData));
+        syncToCloud();
+        alert('已刪除');
+        switchEngView('query');
+      }
     }
 
     function renderEngList() {
@@ -1946,17 +1958,12 @@
             `;
           });
 
-          let engCardBtnHtml = it.cardImg ? `<button onclick="openLightbox('${it.cardImg}')" class="text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition inline-flex">🏢 主單位名片</button>` : '';
-
           inner.innerHTML = `
             <div class="flex justify-between items-start">
               <div>
                 <h4 class="font-bold text-base text-slate-800">${it.name} ${it.taxId ? `<span class="text-xs font-normal text-slate-500">(統編: ${it.taxId})</span>` : ''}</h4>
               </div>
-              <div class="flex items-center gap-2">
-                ${engCardBtnHtml}
-                <button onclick="loadEngineeringToEdit('${it.id}')" class="bg-slate-800 hover:bg-slate-900 text-white text-xs px-3 py-1 rounded-lg">✏️ 編輯</button>
-              </div>
+              <button onclick="loadEngineeringToEdit('${it.id}')" class="bg-slate-800 hover:bg-slate-900 text-white text-xs px-3 py-1 rounded-lg">✏️ 編輯</button>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-1 text-xs text-slate-600">
               ${infoHtml}
