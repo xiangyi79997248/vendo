@@ -83,8 +83,10 @@
             <label class="block text-xs font-semibold text-slate-600 mb-1">配合狀態</label>
             <select id="queryStatus" onchange="filterVendors()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
               <option value="">全部狀態</option>
-              <option value="是">配合中</option>
-              <option value="否">已停止配合</option>
+              <option value="配合中">配合中</option>
+              <option value="長期配合">長期配合</option>
+              <option value="已停止">已停止</option>
+              <option value="未配合過">未配合過</option>
             </select>
           </div>
         </div>
@@ -210,9 +212,13 @@
               </div>
               <div>
                 <div class="mb-2">
-                  <span class="text-xs font-semibold text-slate-600 mr-2">是否還在配合：</span>
-                  <label class="text-sm mr-4"><input type="radio" name="vActive" value="是" checked> 是</label>
-                  <label class="text-sm"><input type="radio" name="vActive" value="否"> 否</label>
+                  <span class="text-xs font-semibold text-slate-600 mr-2">配合狀態標籤 (可複選)：</span>
+                  <div class="flex flex-wrap gap-3 mt-1 text-sm">
+                    <label class="cursor-pointer"><input type="checkbox" name="vActive" value="配合中"> 配合中</label>
+                    <label class="cursor-pointer"><input type="checkbox" name="vActive" value="長期配合"> 長期配合</label>
+                    <label class="cursor-pointer"><input type="checkbox" name="vActive" value="已停止"> 已停止</label>
+                    <label class="cursor-pointer"><input type="checkbox" name="vActive" value="未配合過"> 未配合過</label>
+                  </div>
                 </div>
                 <label class="block text-xs font-semibold text-slate-600 mb-1">備註說明</label>
                 <textarea id="vRemark" rows="4" class="w-full border border-slate-300 rounded p-2 text-sm"></textarea>
@@ -1247,6 +1253,8 @@
         paymentContactsObj[key] = { cardUid, persons, c1: persons[0] || {} };
       });
 
+      const activeArr = Array.from(document.querySelectorAll('input[name="vActive"]:checked')).map(cb => cb.value);
+
       const vData = {
         id: currentVendorEditId || Date.now().toString(),
         code, name,
@@ -1261,7 +1269,7 @@
         website: document.getElementById('vWebsite').value.trim(),
         pickupAddress: document.getElementById('vPickupAddress').value.trim(),
         cardImg: currentVendorCardBase64,
-        isActive: document.querySelector('input[name="vActive"]:checked').value,
+        isActive: activeArr.length > 0 ? activeArr : ['配合中'],
         remark: document.getElementById('vRemark').value.trim(),
         payment: {
           owner: document.getElementById('pOwner').value.trim(),
@@ -1337,7 +1345,10 @@
       if (currentVendorCardBase64) { img.src = currentVendorCardBase64; img.classList.remove('hidden'); }
       else { img.classList.add('hidden'); }
 
-      document.querySelectorAll('input[name="vActive"]').forEach(r => r.checked = (r.value === (v.isActive || '是')));
+      const activeVals = Array.isArray(v.isActive) ? v.isActive : (typeof v.isActive === 'string' ? v.isActive.split(',').map(s => s.trim()) : [v.isActive || '配合中']);
+      document.querySelectorAll('input[name="vActive"]').forEach(cb => {
+        cb.checked = activeVals.includes(cb.value);
+      });
       document.getElementById('vRemark').value = v.remark || '';
 
       document.getElementById('pOwner').value = v.payment?.owner || '';
@@ -1374,7 +1385,8 @@
       const filtered = appData.vendors.filter(v => {
         const matchKw = !kw || [v.name, v.code, v.taxId, v.workItems, v.tel, v.website].some(x => x && x.toLowerCase().includes(kw));
         const matchCat = !cat || v.category === cat;
-        const matchSt = !st || v.isActive === st;
+        const vActiveList = Array.isArray(v.isActive) ? v.isActive : (typeof v.isActive === 'string' ? v.isActive.split(',').map(s => s.trim()) : [v.isActive || '配合中']);
+        const matchSt = !st || vActiveList.includes(st);
         return matchKw && matchCat && matchSt;
       });
 
@@ -1426,7 +1438,6 @@
             });
           });
 
-          // 將公司網址轉換為像名片一樣的按鈕樣式
           let websiteBtnHtml = '';
           if (v.website) {
             let webUrl = v.website.trim();
@@ -1440,11 +1451,29 @@
             `;
           }
 
+          const vActiveList = Array.isArray(v.isActive) ? v.isActive : (typeof v.isActive === 'string' ? v.isActive.split(',').map(s => s.trim()) : [v.isActive || '配合中']);
+          let badgesHtml = '';
+          vActiveList.forEach(val => {
+            let statusBadgeClass = 'text-emerald-600 bg-emerald-100';
+            let statusText = `● ${val}`;
+            if (val === '長期配合') {
+              statusBadgeClass = 'text-blue-700 bg-blue-100';
+              statusText = `★ ${val}`;
+            } else if (val === '已停止' || val === '否') {
+              statusBadgeClass = 'text-rose-500 bg-rose-100';
+              statusText = `✕ ${val}`;
+            } else if (val === '未配合過') {
+              statusBadgeClass = 'text-slate-600 bg-slate-200';
+              statusText = `○ ${val}`;
+            }
+            badgesHtml += `<span class="text-xs ${statusBadgeClass} px-2 py-0.5 rounded font-bold mr-1">${statusText}</span>`;
+          });
+
           card.innerHTML = `
             <div>
               <div class="flex justify-between items-start">
                 <span class="text-xs bg-white px-2 py-0.5 rounded font-mono border">${v.code || ''}</span>
-                <span class="text-xs ${v.isActive === '是' ? 'text-emerald-600 bg-emerald-100' : 'text-rose-500 bg-rose-100'} px-2 py-0.5 rounded font-bold">${v.isActive === '是' ? '● 配合中' : '✕ 已停止'}</span>
+                <div class="flex flex-wrap gap-1 justify-end">${badgesHtml}</div>
               </div>
               <h4 class="font-bold text-slate-800 mt-2">${v.name}</h4>
               <p class="text-xs text-slate-600 mt-1">施工項目：${v.workItems || '未填寫'}</p>
