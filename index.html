@@ -963,8 +963,7 @@
           if (isManual) alert(`同步成功！共有廠商 ${appData.vendors.length} 筆、工程聯繫 ${appData.engineering.length} 筆。`);
           return;
         }
-        syncToCloud();
-        updateBadge('online', '已初始化雲端');
+        updateBadge('online', '雲端連線正常');
       } catch (err) {
         updateBadge('error', '離線暫存模式');
         if (isManual) alert('雲端連線失敗，目前顯示本機快取。');
@@ -1364,6 +1363,187 @@
 
       switchSubTab('subtab-basic');
       switchVendorView('edit');
+    }
+
+    function prepareCreateNewEng() {
+      currentEngEditId = null;
+      currentEngCardBase64 = "";
+      currentMainAccountPhotoBase64 = "";
+      contactCardBase64Map = {};
+      accountPhotoBase64Map = {};
+      document.getElementById('engForm').reset();
+      document.getElementById('engContactsContainer').innerHTML = '';
+      document.getElementById('eMainAccountPhotoPreview').classList.add('hidden');
+      document.getElementById('eMainAccountPhotoDelBtn').classList.add('hidden');
+      document.getElementById('eCardPreview').classList.add('hidden');
+      addEngContactCard();
+      document.getElementById('engFormModeTag').innerText = "新增工程聯繫";
+      document.getElementById('engFormTitle').innerText = "建立工程聯繫資料";
+      document.getElementById('deleteEngBtn').classList.add('hidden');
+      
+      const catSel = document.getElementById('eCategory');
+      if (catSel) catSel.value = activeEngCategory !== 'siteQuery' ? activeEngCategory : '主辦機關';
+      
+      switchEngView('edit');
+    }
+
+    function loadEngineeringToEdit(id) {
+      const item = (appData.engineering || []).find(x => x.id === id);
+      if (!item) return;
+      currentEngEditId = item.id;
+      contactCardBase64Map = {};
+      accountPhotoBase64Map = {};
+
+      document.getElementById('engFormModeTag').innerText = "修改工程聯繫";
+      document.getElementById('engFormTitle').innerText = `修改：${item.name}`;
+      document.getElementById('deleteEngBtn').classList.remove('hidden');
+
+      document.getElementById('eCategory').value = item.category || '主辦機關';
+      document.getElementById('eName').value = item.name || '';
+      document.getElementById('eTaxId').value = item.taxId || '';
+      document.getElementById('eTel').value = item.tel || '';
+      document.getElementById('eFax').value = item.fax || '';
+      document.getElementById('eCompanyAddress1').value = item.companyAddress1 || '';
+      document.getElementById('eCompanyAddress2').value = item.companyAddress2 || '';
+      document.getElementById('eDocAddress1').value = item.docAddress1 || '';
+      document.getElementById('eDocAddress2').value = item.docAddress2 || '';
+      document.getElementById('eMainAccountInfo').value = item.mainAccountInfo || '';
+      document.getElementById('eRemark').value = item.remark || '';
+
+      currentMainAccountPhotoBase64 = item.mainAccountPhoto || "";
+      const accPrev = document.getElementById('eMainAccountPhotoPreview');
+      if (currentMainAccountPhotoBase64) {
+        accPrev.src = currentMainAccountPhotoBase64;
+        accPrev.classList.remove('hidden');
+        document.getElementById('eMainAccountPhotoDelBtn').classList.remove('hidden');
+      } else {
+        accPrev.classList.add('hidden');
+        document.getElementById('eMainAccountPhotoDelBtn').classList.add('hidden');
+      }
+
+      currentEngCardBase64 = item.cardImg || "";
+      const cardPrev = document.getElementById('eCardPreview');
+      if (currentEngCardBase64) {
+        cardPrev.src = currentEngCardBase64;
+        cardPrev.classList.remove('hidden');
+      } else {
+        cardPrev.classList.add('hidden');
+      }
+
+      document.getElementById('engContactsContainer').innerHTML = '';
+      const contacts = item.contacts || {};
+      const contactsArr = Object.values(contacts);
+      if (contactsArr.length > 0) {
+        contactsArr.forEach(cObj => {
+          addEngContactCard({
+            persons: cObj.persons || [],
+            cardUid: cObj.cardUid,
+            siteUnits: cObj.siteUnits || []
+          });
+        });
+      } else {
+        addEngContactCard();
+      }
+
+      switchEngView('edit');
+    }
+
+    function saveEngineering(e) {
+      e.preventDefault();
+      const cat = document.getElementById('eCategory').value;
+      const name = document.getElementById('eName').value.trim();
+      if (!cat || !name) { alert('分類與單位名稱為必填'); return; }
+
+      const contactsObj = {};
+      const cardDivs = document.querySelectorAll('#engContactsContainer > .contact-main-card');
+      cardDivs.forEach((cardDiv, idx) => {
+        const cardUid = cardDiv.getAttribute('data-card-uid');
+        const key = `c${idx + 1}`;
+        const persons = [];
+        
+        cardDiv.querySelectorAll('.person-row-item').forEach(row => {
+          const puid = row.getAttribute('data-puid');
+          const isEsChecked = document.querySelector(`input[name="isActive_${puid}"][value="es"]`)?.checked ?? true;
+          const isActiveVal = isEsChecked ? 'es' : 'no';
+
+          persons.push({
+            puid,
+            personCompany: document.getElementById(`personCompany_${puid}`)?.value.trim() || '',
+            isActive: isActiveVal,
+            name: document.getElementById(`name_${puid}`)?.value.trim() || '',
+            title: document.getElementById(`title_${puid}`)?.value.trim() || '',
+            taxId: document.getElementById(`taxId_${puid}`)?.value.trim() || '',
+            mobile: document.getElementById(`mobile_${puid}`)?.value.trim() || '',
+            lineName: document.getElementById(`lineName_${puid}`)?.value.trim() || '',
+            tel: document.getElementById(`tel_${puid}`)?.value.trim() || '',
+            ext: document.getElementById(`ext_${puid}`)?.value.trim() || '',
+            fax: document.getElementById(`fax_${puid}`)?.value.trim() || '',
+            duty: document.getElementById(`duty_${puid}`)?.value.trim() || '',
+            accountInfo: document.getElementById(`accountInfo_${puid}`)?.value.trim() || '',
+            accountPhoto: accountPhotoBase64Map[puid] || '',
+            email: document.getElementById(`email_${puid}`)?.value.trim() || '',
+            address: document.getElementById(`address_${puid}`)?.value.trim() || '',
+            remark: document.getElementById(`remark_${puid}`)?.value.trim() || '',
+            cardImg: contactCardBase64Map[puid] || ''
+          });
+        });
+
+        const siteUnits = [];
+        cardDiv.querySelectorAll('.site-unit-row').forEach(sRow => {
+          const sNameInput = sRow.querySelector(`[class*="site-name-input-"]`);
+          const useNameInput = sRow.querySelector(`[class*="site-usename-input-"]`);
+          const useTelInput = sRow.querySelector(`[class*="site-usetel-input-"]`);
+          const useExtInput = sRow.querySelector(`[class*="site-useext-input-"]`);
+          const useFaxInput = sRow.querySelector(`[class*="site-usefax-input-"]`);
+          const useContactInput = sRow.querySelector(`[class*="site-usecontact-input-"]`);
+          const useAddressInput = sRow.querySelector(`[class*="site-useaddress-input-"]`);
+
+          siteUnits.push({
+            siteName: sNameInput?.value.trim() || '',
+            useName: useNameInput?.value.trim() || '',
+            useTel: useTelInput?.value.trim() || '',
+            useExt: useExtInput?.value.trim() || '',
+            useFax: useFaxInput?.value.trim() || '',
+            useContact: useContactInput?.value.trim() || '',
+            useAddress: useAddressInput?.value.trim() || ''
+          });
+        });
+
+        contactsObj[key] = { cardUid, persons, siteUnits };
+      });
+
+      const engData = {
+        id: currentEngEditId || Date.now().toString(),
+        category: cat,
+        name,
+        taxId: document.getElementById('eTaxId').value.trim(),
+        tel: document.getElementById('eTel').value.trim(),
+        fax: document.getElementById('eFax').value.trim(),
+        companyAddress1: document.getElementById('eCompanyAddress1').value.trim(),
+        companyAddress2: document.getElementById('eCompanyAddress2').value.trim(),
+        docAddress1: document.getElementById('eDocAddress1').value.trim(),
+        docAddress2: document.getElementById('eDocAddress2').value.trim(),
+        mainAccountInfo: document.getElementById('eMainAccountInfo').value.trim(),
+        mainAccountPhoto: currentMainAccountPhotoBase64,
+        contacts: contactsObj,
+        remark: document.getElementById('eRemark').value.trim(),
+        cardImg: currentEngCardBase64
+      };
+
+      if (!appData.engineering) appData.engineering = [];
+      if (currentEngEditId) {
+        const idx = appData.engineering.findIndex(x => x.id === currentEngEditId);
+        if (idx !== -1) appData.engineering[idx] = engData;
+      } else {
+        appData.engineering.unshift(engData);
+      }
+
+      localStorage.setItem('combined_system_data', JSON.stringify(appData));
+      syncToCloud();
+      alert('工程聯繫資料儲存成功！');
+      switchEngView('query');
+      renderEngList();
+      renderEngSiteQuery();
     }
 
     function deleteCurrentEngineering() {
