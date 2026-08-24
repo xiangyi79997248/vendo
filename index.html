@@ -83,8 +83,10 @@
             <label class="block text-xs font-semibold text-slate-600 mb-1">配合狀態</label>
             <select id="queryStatus" onchange="filterVendors()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
               <option value="">全部狀態</option>
-              <option value="是">配合中</option>
-              <option value="否">已停止配合</option>
+              <option value="配合中">配合中</option>
+              <option value="長期配合">長期配合</option>
+              <option value="已停止">已停止</option>
+              <option value="未配合過">未配合過</option>
             </select>
           </div>
         </div>
@@ -194,7 +196,7 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-              <div><label class="block text-xs font-semibold text-slate-600 mb-1">公司網址</label><input type="text" id="vWebsite" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm"></div>
+              <div><label class="block text-xs font-semibold text-slate-600 mb-1">公司網址</label><input type="text" id="vWebsite" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm" placeholder="例如：https://www.example.com"></div>
               <div><label class="block text-xs font-semibold text-slate-600 mb-1">取貨地址</label><input type="text" id="vPickupAddress" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm"></div>
             </div>
 
@@ -210,9 +212,13 @@
               </div>
               <div>
                 <div class="mb-2">
-                  <span class="text-xs font-semibold text-slate-600 mr-2">是否還在配合：</span>
-                  <label class="text-sm mr-4"><input type="radio" name="vActive" value="是" checked> 是</label>
-                  <label class="text-sm"><input type="radio" name="vActive" value="否"> 否</label>
+                  <span class="text-xs font-semibold text-slate-600 mr-2">配合狀態標籤 (可複選)：</span>
+                  <div class="flex flex-wrap gap-3 mt-1 text-sm">
+                    <label class="cursor-pointer"><input type="checkbox" name="vActive" value="配合中"> 配合中</label>
+                    <label class="cursor-pointer"><input type="checkbox" name="vActive" value="長期配合"> 長期配合</label>
+                    <label class="cursor-pointer"><input type="checkbox" name="vActive" value="已停止"> 已停止</label>
+                    <label class="cursor-pointer"><input type="checkbox" name="vActive" value="未配合過"> 未配合過</label>
+                  </div>
                 </div>
                 <label class="block text-xs font-semibold text-slate-600 mb-1">備註說明</label>
                 <textarea id="vRemark" rows="4" class="w-full border border-slate-300 rounded p-2 text-sm"></textarea>
@@ -454,7 +460,7 @@
   </div>
 
   <script>
-    const CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbzO1CCOTViR-jxIaGdeXsJmHU_urcXMljRLvIJ21hC-XjTPatNuyNVTELIYXxSY6Cvi/exec";
+    const CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbylVkL-CcxV7Qz-ChXPaChlyAhnJFp8yjTthwF2jiJgYZdtRU7vOHZVTmuRy77FwOw/exec";
 
     let appData = JSON.parse(localStorage.getItem('combined_system_data')) || { vendors: [], engineering: [] };
     if (Array.isArray(appData)) {
@@ -488,7 +494,6 @@
       const isActive = data.isActive !== undefined ? data.isActive : "es";
 
       if (isVendor) {
-        // 採購廠商專用：無在職狀態切換、無交接人與離職折疊畫面
         return `
           <div id="personRow_${uniqueId}" class="bg-white p-3 rounded-lg border border-slate-300 shadow-sm space-y-2 relative person-row-item mb-2" data-puid="${uniqueId}">
             <div class="flex justify-between items-center border-b pb-1">
@@ -542,7 +547,6 @@
         `;
       }
 
-      // 工程聯繫資料專用（保留原本的在職／離職與交接功能）[cite: 2]
       const isLab = activeEngCategory === '實驗室';
       const dutyLabel = isLab ? '試驗項目' : '負責項目';
       const showPersonAccount = (activeEngCategory === '實驗室' || activeEngCategory === '公家機關');
@@ -554,13 +558,11 @@
             <button type="button" onclick="removePersonRow('${uniqueId}')" class="text-red-500 hover:text-red-700 text-xs px-2 py-0.5 rounded bg-red-50 border border-red-200 font-medium">✕ 移除此人</button>
           </div>
 
-          <!-- 每個聯絡人下方獨立的公司名稱欄位 -->
           <div class="bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-200">
             <label class="block text-[11px] font-bold text-emerald-900 mb-1">🏢 該聯絡人所屬的公司 / 單位名稱</label>
             <input type="text" id="personCompany_${uniqueId}" value="${data.personCompany || ''}" placeholder="例如：臺南市南化區公所 / 臺南市南化區圖書館..." class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs font-bold text-slate-800">
           </div>
 
-          <!-- 在職狀態切換列 -->
           <div class="flex items-center justify-between bg-slate-100 px-2.5 py-1 rounded">
             <span class="text-xs font-bold text-slate-700">💼 人員在職狀態：</span>
             <div class="flex items-center gap-3 text-xs">
@@ -573,7 +575,6 @@
             </div>
           </div>
 
-          <!-- 在職時顯示完整輸入區塊 -->
           <div class="person-extra-${uniqueId} ${isActive === 'no' || isActive === '否' ? 'hidden' : ''} space-y-2">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
               <div><label class="block text-[10px] text-slate-500 mb-0.5">姓名 *</label><input type="text" id="name_${uniqueId}" value="${data.name || ''}" placeholder="姓名" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white font-medium"></div>
@@ -630,7 +631,6 @@
             </div>
           </div>
 
-          <!-- 已離職/換人時顯示：精簡 4 格並保留備註 -->
           <div class="person-compact-${uniqueId} ${isActive === 'no' || isActive === '否' ? '' : 'hidden'} space-y-2">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-2 items-center bg-slate-100 p-2 rounded border border-slate-300">
               <div>
@@ -656,7 +656,6 @@
             </div>
           </div>
 
-          <!-- 隱藏的完整欄位同步 -->
           <div class="hidden">
             <input type="text" id="name_${uniqueId}" value="${data.name || ''}">
             <input type="text" id="title_${uniqueId}" value="${data.title || ''}">
@@ -729,7 +728,6 @@
 
         <div id="personsContainer_${uid}" class="space-y-2"></div>
 
-        <!-- 採購廠商不顯示「在此下方新增交接聯絡人」與「負責案場與對應使用單位清單」 -->
         ${isVendor ? '' : `
         <div class="pt-1 flex justify-end">
           <button type="button" onclick="addHandoverPersonToCard('${uid}')" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] px-3 py-1 rounded font-semibold transition flex items-center gap-1 shadow-sm">
@@ -1255,6 +1253,8 @@
         paymentContactsObj[key] = { cardUid, persons, c1: persons[0] || {} };
       });
 
+      const activeArr = Array.from(document.querySelectorAll('input[name="vActive"]:checked')).map(cb => cb.value);
+
       const vData = {
         id: currentVendorEditId || Date.now().toString(),
         code, name,
@@ -1269,7 +1269,7 @@
         website: document.getElementById('vWebsite').value.trim(),
         pickupAddress: document.getElementById('vPickupAddress').value.trim(),
         cardImg: currentVendorCardBase64,
-        isActive: document.querySelector('input[name="vActive"]:checked').value,
+        isActive: activeArr.length > 0 ? activeArr : ['配合中'],
         remark: document.getElementById('vRemark').value.trim(),
         payment: {
           owner: document.getElementById('pOwner').value.trim(),
@@ -1345,7 +1345,10 @@
       if (currentVendorCardBase64) { img.src = currentVendorCardBase64; img.classList.remove('hidden'); }
       else { img.classList.add('hidden'); }
 
-      document.querySelectorAll('input[name="vActive"]').forEach(r => r.checked = (r.value === (v.isActive || '是')));
+      const activeVals = Array.isArray(v.isActive) ? v.isActive : (typeof v.isActive === 'string' ? v.isActive.split(',').map(s => s.trim()) : [v.isActive || '配合中']);
+      document.querySelectorAll('input[name="vActive"]').forEach(cb => {
+        cb.checked = activeVals.includes(cb.value);
+      });
       document.getElementById('vRemark').value = v.remark || '';
 
       document.getElementById('pOwner').value = v.payment?.owner || '';
@@ -1361,6 +1364,17 @@
 
       switchSubTab('subtab-basic');
       switchVendorView('edit');
+    }
+
+    function deleteCurrentEngineering() {
+      if (!currentEngEditId) return;
+      if (confirm('確定刪除此筆工程聯繫資料？')) {
+        appData.engineering = appData.engineering.filter(x => x.id !== currentEngEditId);
+        localStorage.setItem('combined_system_data', JSON.stringify(appData));
+        syncToCloud();
+        alert('已刪除');
+        switchEngView('query');
+      }
     }
 
     function deleteCurrentVendor() {
@@ -1380,9 +1394,10 @@
       const st = document.getElementById('queryStatus').value;
 
       const filtered = appData.vendors.filter(v => {
-        const matchKw = !kw || [v.name, v.code, v.taxId, v.workItems, v.tel].some(x => x && x.toLowerCase().includes(kw));
+        const matchKw = !kw || [v.name, v.code, v.taxId, v.workItems, v.tel, v.website].some(x => x && x.toLowerCase().includes(kw));
         const matchCat = !cat || v.category === cat;
-        const matchSt = !st || v.isActive === st;
+        const vActiveList = Array.isArray(v.isActive) ? v.isActive : (typeof v.isActive === 'string' ? v.isActive.split(',').map(s => s.trim()) : [v.isActive || '配合中']);
+        const matchSt = !st || vActiveList.includes(st);
         return matchKw && matchCat && matchSt;
       });
 
@@ -1434,11 +1449,42 @@
             });
           });
 
+          let websiteBtnHtml = '';
+          if (v.website) {
+            let webUrl = v.website.trim();
+            if (!webUrl.startsWith('http://') && !webUrl.startsWith('https://')) {
+              webUrl = 'https://' + webUrl;
+            }
+            websiteBtnHtml = `
+              <a href="${webUrl}" target="_blank" class="text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition">
+                🌐 公司網址
+              </a>
+            `;
+          }
+
+          const vActiveList = Array.isArray(v.isActive) ? v.isActive : (typeof v.isActive === 'string' ? v.isActive.split(',').map(s => s.trim()) : [v.isActive || '配合中']);
+          let badgesHtml = '';
+          vActiveList.forEach(val => {
+            let statusBadgeClass = 'text-emerald-600 bg-emerald-100';
+            let statusText = `● ${val}`;
+            if (val === '長期配合') {
+              statusBadgeClass = 'text-blue-700 bg-blue-100';
+              statusText = `★ ${val}`;
+            } else if (val === '已停止' || val === '否') {
+              statusBadgeClass = 'text-rose-500 bg-rose-100';
+              statusText = `✕ ${val}`;
+            } else if (val === '未配合過') {
+              statusBadgeClass = 'text-slate-600 bg-slate-200';
+              statusText = `○ ${val}`;
+            }
+            badgesHtml += `<span class="text-xs ${statusBadgeClass} px-2 py-0.5 rounded font-bold mr-1">${statusText}</span>`;
+          });
+
           card.innerHTML = `
             <div>
               <div class="flex justify-between items-start">
                 <span class="text-xs bg-white px-2 py-0.5 rounded font-mono border">${v.code || ''}</span>
-                <span class="text-xs ${v.isActive === '是' ? 'text-emerald-600 bg-emerald-100' : 'text-rose-500 bg-rose-100'} px-2 py-0.5 rounded font-bold">${v.isActive === '是' ? '● 配合中' : '✕ 已停止'}</span>
+                <div class="flex flex-wrap gap-1 justify-end">${badgesHtml}</div>
               </div>
               <h4 class="font-bold text-slate-800 mt-2">${v.name}</h4>
               <p class="text-xs text-slate-600 mt-1">施工項目：${v.workItems || '未填寫'}</p>
@@ -1446,7 +1492,8 @@
             </div>
             <div class="mt-3 pt-2 border-t flex flex-wrap justify-between items-center gap-2">
               <div class="flex flex-wrap items-center gap-1.5">
-                ${v.cardImg ? `<button onclick="openLightbox('${v.cardImg}')" class="text-xs text-emerald-600 hover:text-emerald-800 underline">🏢 公司名片</button>` : ''}
+                ${v.cardImg ? `<button onclick="openLightbox('${v.cardImg}')" class="text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition">🏢 公司名片</button>` : ''}
+                ${websiteBtnHtml}
                 ${contactCardsBtnHtml}
               </div>
               <button onclick="loadVendorToEdit('${v.id}')" class="bg-slate-800 text-white text-xs px-3 py-1 rounded transition">✏️ 編輯</button>
@@ -1510,209 +1557,6 @@
         card.appendChild(g);
         container.appendChild(card);
       });
-    }
-
-    function prepareCreateNewEng() {
-      currentEngEditId = null;
-      currentEngCardBase64 = "";
-      currentMainAccountPhotoBase64 = "";
-      contactCardBase64Map = {};
-      accountPhotoBase64Map = {};
-      document.getElementById('engForm').reset();
-      document.getElementById('engContactsContainer').innerHTML = '';
-      addEngContactCard();
-      document.getElementById('eCategory').value = activeEngCategory;
-      document.getElementById('engFormModeTag').innerText = `新增${activeEngCategory}`;
-      document.getElementById('engFormTitle').innerText = `建立${activeEngCategory}資料`;
-      document.getElementById('deleteEngBtn').classList.add('hidden');
-      document.getElementById('eCardPreview').classList.add('hidden');
-      document.getElementById('eMainAccountPhotoPreview').classList.add('hidden');
-      document.getElementById('eMainAccountPhotoDelBtn').classList.add('hidden');
-      
-      const mainAccSec = document.getElementById('mainAccountSection');
-      if (activeEngCategory === '主辦機關' || activeEngCategory === '監造單位') {
-        mainAccSec.classList.remove('hidden');
-      } else {
-        mainAccSec.classList.add('hidden');
-      }
-
-      switchEngView('edit');
-    }
-
-    function saveEngineering(e) {
-      e.preventDefault();
-      const category = document.getElementById('eCategory').value;
-      const name = document.getElementById('eName').value.trim();
-      if (!name) { alert('單位 / 公司名稱為必填'); return; }
-
-      const contactsObj = {};
-      const cardDivs = document.querySelectorAll('#engContactsContainer > .contact-main-card');
-      let allSites = [];
-
-      cardDivs.forEach((cardDiv, idx) => {
-        const cardUid = cardDiv.getAttribute('data-card-uid');
-        const key = `c${idx + 1}`;
-        const persons = [];
-
-        cardDiv.querySelectorAll('.person-row-item').forEach(row => {
-          const puid = row.getAttribute('data-puid');
-          persons.push({
-            puid,
-            personCompany: document.getElementById(`personCompany_${puid}`)?.value.trim() || '',
-            isActive: document.querySelector(`input[name="isActive_${puid}"]:checked`)?.value || 'es',
-            name: document.getElementById(`name_${puid}`)?.value.trim() || '',
-            title: document.getElementById(`title_${puid}`)?.value.trim() || '',
-            taxId: document.getElementById(`taxId_${puid}`)?.value.trim() || '',
-            mobile: document.getElementById(`mobile_${puid}`)?.value.trim() || '',
-            lineName: document.getElementById(`lineName_${puid}`)?.value.trim() || '',
-            tel: document.getElementById(`tel_${puid}`)?.value.trim() || '',
-            ext: document.getElementById(`ext_${puid}`)?.value.trim() || '',
-            fax: document.getElementById(`fax_${puid}`)?.value.trim() || '',
-            duty: document.getElementById(`duty_${puid}`)?.value.trim() || '',
-            accountInfo: document.getElementById(`accountInfo_${puid}`)?.value.trim() || '',
-            accountPhoto: accountPhotoBase64Map[puid] || '',
-            email: document.getElementById(`email_${puid}`)?.value.trim() || '',
-            address: document.getElementById(`address_${puid}`)?.value.trim() || '',
-            remark: document.getElementById(`remark_${puid}`)?.value.trim() || '',
-            cardImg: contactCardBase64Map[puid] || ''
-          });
-        });
-
-        const siteUnitRows = cardDiv.querySelectorAll('.site-unit-row');
-        const siteUnitsArr = [];
-        siteUnitRows.forEach(row => {
-          const sName = row.querySelector(`.site-name-input-${cardUid}`)?.value.trim() || '';
-          const uName = row.querySelector(`.site-usename-input-${cardUid}`)?.value.trim() || '';
-          const uTel = row.querySelector(`.site-usetel-input-${cardUid}`)?.value.trim() || '';
-          const uExt = row.querySelector(`.site-useext-input-${cardUid}`)?.value.trim() || '';
-          const uFax = row.querySelector(`.site-usefax-input-${cardUid}`)?.value.trim() || '';
-          const uContact = row.querySelector(`.site-usecontact-input-${cardUid}`)?.value.trim() || '';
-          const uAddress = row.querySelector(`.site-useaddress-input-${cardUid}`)?.value.trim() || '';
-          if (sName) {
-            siteUnitsArr.push({ siteName: sName, useName: uName, useTel: uTel, useExt: uExt, useFax: uFax, useContact: uContact, useAddress: uAddress });
-            allSites.push(sName);
-          }
-        });
-
-        contactsObj[key] = {
-          cardUid,
-          persons,
-          siteUnits: siteUnitsArr
-        };
-      });
-
-      const projectName = allSites.length > 0 ? allSites.join('、') : (name + ' 相關工程');
-
-      const eData = {
-        id: currentEngEditId || Date.now().toString(),
-        category, name,
-        taxId: document.getElementById('eTaxId').value.trim(),
-        tel: document.getElementById('eTel').value.trim(),
-        fax: document.getElementById('eFax').value.trim(),
-        companyAddress1: document.getElementById('eCompanyAddress1').value.trim(),
-        companyAddress2: document.getElementById('eCompanyAddress2').value.trim(),
-        docAddress1: document.getElementById('eDocAddress1').value.trim(),
-        docAddress2: document.getElementById('eDocAddress2').value.trim(),
-        mainAccountInfo: document.getElementById('eMainAccountInfo')?.value.trim() || '',
-        mainAccountPhoto: currentMainAccountPhotoBase64,
-        contacts: contactsObj,
-        projectName: projectName,
-        remark: document.getElementById('eRemark').value.trim(),
-        cardImg: currentEngCardBase64
-      };
-
-      if (!appData.engineering) appData.engineering = [];
-      if (currentEngEditId) {
-        const idx = appData.engineering.findIndex(item => item.id === currentEngEditId);
-        if (idx !== -1) appData.engineering[idx] = eData;
-      } else {
-        appData.engineering.unshift(eData);
-      }
-
-      localStorage.setItem('combined_system_data', JSON.stringify(appData));
-      syncToCloud();
-      alert('工程聯繫資料儲存成功！');
-      switchEngCategory(category);
-      switchEngView('query');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function loadEngineeringToEdit(id) {
-      const item = (appData.engineering || []).find(x => x.id === id);
-      if (!item) return;
-      currentEngEditId = item.id;
-      contactCardBase64Map = {};
-      accountPhotoBase64Map = {};
-
-      document.getElementById('engFormModeTag').innerText = `修改${item.category || '工程聯繫'}`;
-      document.getElementById('engFormTitle').innerText = `修改：${item.name}`;
-      document.getElementById('deleteEngBtn').classList.remove('hidden');
-
-      document.getElementById('engContactsContainer').innerHTML = '';
-
-      document.getElementById('eCategory').value = item.category || '主辦機關';
-      document.getElementById('eName').value = item.name || '';
-      document.getElementById('eTaxId').value = item.taxId || '';
-      document.getElementById('eTel').value = item.tel || '';
-      document.getElementById('eFax').value = item.fax || '';
-      document.getElementById('eCompanyAddress1').value = item.companyAddress1 || '';
-      document.getElementById('eCompanyAddress2').value = item.companyAddress2 || '';
-      document.getElementById('eDocAddress1').value = item.docAddress1 || '';
-      document.getElementById('eDocAddress2').value = item.docAddress2 || '';
-      
-      const mainAccSec = document.getElementById('mainAccountSection');
-      if (item.category === '主辦機關' || item.category === '監造單位') {
-        mainAccSec.classList.remove('hidden');
-        document.getElementById('eMainAccountInfo').value = item.mainAccountInfo || '';
-        currentMainAccountPhotoBase64 = item.mainAccountPhoto || '';
-        const photoPrev = document.getElementById('eMainAccountPhotoPreview');
-        const photoDel = document.getElementById('eMainAccountPhotoDelBtn');
-        if (currentMainAccountPhotoBase64) {
-          photoPrev.src = currentMainAccountPhotoBase64;
-          photoPrev.classList.remove('hidden');
-          photoDel.classList.remove('hidden');
-        } else {
-          photoPrev.classList.add('hidden');
-          photoDel.classList.add('hidden');
-        }
-      } else {
-        mainAccSec.classList.add('hidden');
-      }
-
-      const contacts = item.contacts || {};
-      const contactKeys = Object.keys(contacts);
-      if (contactKeys.length > 0) {
-        contactKeys.forEach(k => {
-          const cObj = contacts[k];
-          const persons = cObj.persons || (cObj.name ? [cObj] : []);
-          addEngContactCard({ persons, siteUnits: cObj.siteUnits, cardUid: cObj.cardUid });
-        });
-      } else if (item.contactPerson) {
-        addEngContactCard({ persons: [{ name: item.contactPerson, tel: item.tel, ext: item.extOrMobile }], siteUnits: [{ siteName: item.projectName, useName: item.useUnitName, useTel: item.useUnitTel, useContact: item.useUnitContact, useAddress: item.useUnitAddress }] });
-      } else {
-        addEngContactCard();
-      }
-
-      document.getElementById('eRemark').value = item.remark || '';
-
-      currentEngCardBase64 = item.cardImg || "";
-      const prev = document.getElementById('eCardPreview');
-      if (currentEngCardBase64) { prev.src = currentEngCardBase64; prev.classList.remove('hidden'); }
-      else { prev.classList.add('hidden'); }
-
-      switchEngView('edit');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function deleteCurrentEngineering() {
-      if (!currentEngEditId) return;
-      if (confirm('確定刪除此筆工程聯繫資料？')) {
-        appData.engineering = appData.engineering.filter(x => x.id !== currentEngEditId);
-        localStorage.setItem('combined_system_data', JSON.stringify(appData));
-        syncToCloud();
-        alert('已刪除');
-        switchEngView('query');
-      }
     }
 
     function renderEngList() {
@@ -1922,12 +1766,17 @@
             `;
           });
 
+          let engCardBtnHtml = it.cardImg ? `<button onclick="openLightbox('${it.cardImg}')" class="text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition inline-flex">🏢 主單位名片</button>` : '';
+
           inner.innerHTML = `
             <div class="flex justify-between items-start">
               <div>
                 <h4 class="font-bold text-base text-slate-800">${it.name} ${it.taxId ? `<span class="text-xs font-normal text-slate-500">(統編: ${it.taxId})</span>` : ''}</h4>
               </div>
-              <button onclick="loadEngineeringToEdit('${it.id}')" class="bg-slate-800 hover:bg-slate-900 text-white text-xs px-3 py-1 rounded-lg">✏️ 編輯</button>
+              <div class="flex items-center gap-2">
+                ${engCardBtnHtml}
+                <button onclick="loadEngineeringToEdit('${it.id}')" class="bg-slate-800 hover:bg-slate-900 text-white text-xs px-3 py-1 rounded-lg">✏️ 編輯</button>
+              </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-1 text-xs text-slate-600">
               ${infoHtml}
