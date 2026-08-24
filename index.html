@@ -811,6 +811,7 @@
         document.getElementById('mainSysEngBtn').className = "px-3.5 py-1.5 rounded-lg text-sm font-semibold transition bg-emerald-600 text-white shadow";
         renderEngList();
       }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function switchVendorView(view) {
@@ -834,6 +835,7 @@
         document.getElementById('viewVendorEdit').classList.remove('hidden');
         document.getElementById('navEditBtn').className = "bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-800 transition";
       }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function switchEngCategory(cat) {
@@ -863,6 +865,7 @@
         document.getElementById('viewEngQuery').classList.remove('hidden');
         renderEngList();
       }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function switchEngView(view) {
@@ -880,6 +883,7 @@
       } else {
         document.getElementById('viewEngEdit').classList.remove('hidden');
       }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function openLightbox(imgSrc) {
@@ -1404,6 +1408,7 @@
       alert('工程聯繫資料儲存成功！');
       switchEngCategory(category);
       switchEngView('query');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function loadEngineeringToEdit(id) {
@@ -1450,6 +1455,7 @@
       else { prev.classList.add('hidden'); }
 
       switchEngView('edit');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function deleteCurrentEngineering() {
