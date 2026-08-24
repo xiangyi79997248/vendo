@@ -185,7 +185,7 @@
 
             <div class="space-y-3 pt-2 border-t border-slate-200">
               <div class="flex justify-between items-center">
-                <h4 class="text-xs font-bold text-slate-700">👤 廠商聯絡人清單 (含在職狀態與名片)</h4>
+                <h4 class="text-xs font-bold text-slate-700">👤 廠商聯絡人清單 (含名片)</h4>
                 <button type="button" onclick="addVendorContactCard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg shadow font-semibold transition flex items-center gap-1">
                   <span>➕</span> 新增一位廠商聯絡人
                 </button>
@@ -237,7 +237,7 @@
             <div class="space-y-3 pt-2 border-t border-slate-200 mt-2">
               <div class="flex justify-between items-center">
                 <h4 class="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-                  <span>💼</span> 請款聯絡人清單 (含在職狀態與名片)
+                  <span>💼</span> 請款聯絡人清單 (含名片)
                 </h4>
                 <button type="button" onclick="addPaymentContactCard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg shadow font-semibold transition flex items-center gap-1">
                   <span>➕</span> 新增一位請款聯絡人
@@ -484,8 +484,65 @@
       }
     }
 
-    function getSinglePersonHtml(uniqueId, data = {}) {
+    function getSinglePersonHtml(uniqueId, data = {}, isVendor = false) {
       const isActive = data.isActive !== undefined ? data.isActive : "es";
+
+      if (isVendor) {
+        // 採購廠商專用：無在職狀態切換、無交接人與離職折疊畫面
+        return `
+          <div id="personRow_${uniqueId}" class="bg-white p-3 rounded-lg border border-slate-300 shadow-sm space-y-2 relative person-row-item mb-2" data-puid="${uniqueId}">
+            <div class="flex justify-between items-center border-b pb-1">
+              <span class="text-xs font-bold text-slate-700">👤 聯絡人明細</span>
+              <button type="button" onclick="removePersonRow('${uniqueId}')" class="text-red-500 hover:text-red-700 text-xs px-2 py-0.5 rounded bg-red-50 border border-red-200 font-medium">✕ 移除此人</button>
+            </div>
+
+            <div class="space-y-2">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div><label class="block text-[10px] text-slate-500 mb-0.5">姓名 *</label><input type="text" id="name_${uniqueId}" value="${data.name || ''}" placeholder="姓名" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white font-medium"></div>
+                <div><label class="block text-[10px] text-slate-500 mb-0.5">職稱</label><input type="text" id="title_${uniqueId}" value="${data.title || ''}" placeholder="職稱" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
+                <div><label class="block text-[10px] text-slate-500 mb-0.5">統編</label><input type="text" id="taxId_${uniqueId}" value="${data.taxId || ''}" placeholder="統編" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
+                <div><label class="block text-[10px] text-slate-500 mb-0.5">Line 名稱</label><input type="text" id="lineName_${uniqueId}" value="${data.lineName || ''}" placeholder="Line 名稱" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
+              </div>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1">
+                <div><label class="block text-[10px] text-slate-500 mb-0.5">手機</label><input type="text" id="mobile_${uniqueId}" value="${data.mobile || ''}" placeholder="手機" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
+                <div><label class="block text-[10px] text-slate-500 mb-0.5">電話</label><input type="text" id="tel_${uniqueId}" value="${data.tel || ''}" placeholder="電話" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
+                <div><label class="block text-[10px] text-slate-500 mb-0.5">分機</label><input type="text" id="ext_${uniqueId}" value="${data.ext || ''}" placeholder="分機" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
+                <div><label class="block text-[10px] text-slate-500 mb-0.5">傳真</label><input type="text" id="fax_${uniqueId}" value="${data.fax || ''}" placeholder="傳真" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
+              </div>
+              
+              <div class="pt-1">
+                <label class="block text-[10px] text-slate-500 mb-0.5">負責項目</label>
+                <textarea id="duty_${uniqueId}" rows="3" placeholder="請詳細填寫負責項目..." class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white">${data.duty || ''}</textarea>
+              </div>
+
+              <div class="pt-1">
+                <label class="block text-[10px] text-slate-500 mb-0.5">E-mail</label>
+                <input type="text" id="email_${uniqueId}" value="${data.email || ''}" placeholder="E-mail" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white">
+              </div>
+              <div class="pt-1">
+                <label class="block text-[10px] text-slate-500 mb-0.5">通訊地址</label>
+                <input type="text" id="address_${uniqueId}" value="${data.address || ''}" placeholder="通訊地址" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white">
+              </div>
+              
+              <div class="pt-1">
+                <label class="block text-[10px] text-slate-500 mb-0.5">備註說明</label>
+                <input type="text" id="remark_${uniqueId}" value="${data.remark || ''}" placeholder="填寫該聯絡人備註..." class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white">
+              </div>
+
+              <div class="flex flex-wrap items-center gap-3 pt-2 mt-1 border-t border-slate-200/80 bg-slate-50 p-2 rounded">
+                <label class="text-[11px] text-slate-700 font-bold flex items-center gap-1">📇 聯絡人名片：</label>
+                <input type="file" id="cardInput_${uniqueId}" accept="image/*" class="text-xs text-slate-500 cursor-pointer" onchange="handleSingleContactCardUpload(event, '${uniqueId}')">
+                <div class="relative cursor-pointer" onclick="openLightbox(contactCardBase64Map['${uniqueId}'])" title="點擊放大檢視名片">
+                  <img id="cardPreview_${uniqueId}" class="h-10 max-w-[120px] rounded shadow-sm ${data.cardImg ? '' : 'hidden'} border bg-white object-contain hover:ring-2 hover:ring-emerald-500 transition" src="${data.cardImg || ''}" alt="名片預覽">
+                </div>
+                <button type="button" id="cardDelBtn_${uniqueId}" onclick="removeSingleContactCard('${uniqueId}')" class="text-[11px] text-red-600 hover:text-red-800 bg-red-50 border border-red-200 rounded px-2 py-0.5 ${data.cardImg ? '' : 'hidden'} font-medium">✕ 移除名片</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // 工程聯繫資料專用（保留原本的在職／離職與交接功能）[cite: 2]
       const isLab = activeEngCategory === '實驗室';
       const dutyLabel = isLab ? '試驗項目' : '負責項目';
       const showPersonAccount = (activeEngCategory === '實驗室' || activeEngCategory === '公家機關');
@@ -531,13 +588,11 @@
               <div><label class="block text-[10px] text-slate-500 mb-0.5">傳真</label><input type="text" id="fax_${uniqueId}" value="${data.fax || ''}" placeholder="傳真" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"></div>
             </div>
             
-            <!-- 負責項目 / 試驗項目 (加大版面) -->
             <div class="pt-1">
               <label class="block text-[10px] text-slate-500 mb-0.5">${dutyLabel}</label>
               <textarea id="duty_${uniqueId}" rows="4" placeholder="請詳細填寫${dutyLabel}..." class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white">${data.duty || ''}</textarea>
             </div>
 
-            <!-- 帳戶資訊與帳戶照片 (僅實驗室與公家機關之聯絡人顯示) -->
             <div class="pt-1 bg-blue-50/50 p-3 rounded-lg border border-blue-100 space-y-2 ${showPersonAccount ? '' : 'hidden'}">
               <label class="block text-xs font-bold text-blue-900 mb-1">💳 聯絡人帳戶資訊與帳戶照片</label>
               <textarea id="accountInfo_${uniqueId}" rows="3" placeholder="請填寫銀行代號、分行、戶名、帳號等完整資訊..." class="w-full border border-blue-300 rounded px-2.5 py-1.5 text-xs bg-white font-medium">${data.accountInfo || ''}</textarea>
@@ -560,7 +615,6 @@
               <input type="text" id="address_${uniqueId}" value="${data.address || ''}" placeholder="通訊地址" class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white">
             </div>
             
-            <!-- 聯絡人個別備註欄位 -->
             <div class="pt-1">
               <label class="block text-[10px] text-slate-500 mb-0.5">備註 (離職交接說明等)</label>
               <input type="text" id="remark_${uniqueId}" value="${data.remark || ''}" placeholder="填寫該聯絡人備註..." class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white">
@@ -647,7 +701,9 @@
       const personsContainer = document.getElementById(`personsContainer_${cardUniqueId}`);
       if (!personsContainer) return;
       const newPuid = 'p_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-      personsContainer.insertAdjacentHTML('beforeend', getSinglePersonHtml(newPuid, personData));
+      const parentCard = document.getElementById(`contactCard_${cardUniqueId}`);
+      const isVendorCard = parentCard && (parentCard.closest('#vendorContactsContainer') || parentCard.closest('#paymentContactsContainer'));
+      personsContainer.insertAdjacentHTML('beforeend', getSinglePersonHtml(newPuid, personData, !!isVendorCard));
     }
 
     function createContactCardContainer(contactDataList = [], containerType = 'eng', cardUniqueId = null, siteUnitsList = []) {
@@ -663,6 +719,7 @@
 
       let titleLabel = containerType === 'vendor' ? '聯絡人' : (containerType === 'payment' ? '請款聯絡人' : '👤 聯絡人板塊');
       const showSiteUnits = (activeEngCategory === '主辦機關' || activeEngCategory === '監造單位');
+      const isVendor = containerType === 'vendor' || containerType === 'payment';
 
       cardDiv.innerHTML = `
         <div class="flex justify-between items-center border-b pb-1.5">
@@ -672,6 +729,8 @@
 
         <div id="personsContainer_${uid}" class="space-y-2"></div>
 
+        <!-- 採購廠商不顯示「在此下方新增交接聯絡人」與「負責案場與對應使用單位清單」 -->
+        ${isVendor ? '' : `
         <div class="pt-1 flex justify-end">
           <button type="button" onclick="addHandoverPersonToCard('${uid}')" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] px-3 py-1 rounded font-semibold transition flex items-center gap-1 shadow-sm">
             <span>➕</span> 在此下方新增交接聯絡人
@@ -685,6 +744,7 @@
           </div>
           <div id="sitesList_${uid}" class="space-y-3"></div>
         </div>
+        `}
       `;
 
       container.appendChild(cardDiv);
@@ -693,16 +753,16 @@
       if (contactDataList.length > 0) {
         contactDataList.forEach(pData => {
           const puid = pData.puid || ('p_' + Date.now() + '_' + Math.floor(Math.random() * 1000));
-          document.getElementById(`personsContainer_${uid}`).insertAdjacentHTML('beforeend', getSinglePersonHtml(puid, pData));
+          document.getElementById(`personsContainer_${uid}`).insertAdjacentHTML('beforeend', getSinglePersonHtml(puid, pData, isVendor));
           if (pData.cardImg) contactCardBase64Map[puid] = pData.cardImg;
           if (pData.accountPhoto) accountPhotoBase64Map[puid] = pData.accountPhoto;
         });
       } else {
         const puid = 'p_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-        document.getElementById(`personsContainer_${uid}`).insertAdjacentHTML('beforeend', getSinglePersonHtml(puid, {}));
+        document.getElementById(`personsContainer_${uid}`).insertAdjacentHTML('beforeend', getSinglePersonHtml(puid, {}, isVendor));
       }
 
-      if (containerType === 'eng' && showSiteUnits) {
+      if (!isVendor && containerType === 'eng' && showSiteUnits) {
         let siteUnitsArr = siteUnitsList.length > 0 ? siteUnitsList : (contactDataList[0]?.siteUnits || []);
         if (siteUnitsArr.length === 0 && contactDataList[0]?.siteName) {
           siteUnitsArr = [{ 
@@ -1141,8 +1201,8 @@
           const puid = row.getAttribute('data-puid');
           persons.push({
             puid,
-            personCompany: document.getElementById(`personCompany_${puid}`)?.value.trim() || '',
-            isActive: document.querySelector(`input[name="isActive_${puid}"]:checked`)?.value || 'es',
+            personCompany: '',
+            isActive: 'es',
             name: document.getElementById(`name_${puid}`)?.value.trim() || '',
             title: document.getElementById(`title_${puid}`)?.value.trim() || '',
             taxId: document.getElementById(`taxId_${puid}`)?.value.trim() || '',
@@ -1152,8 +1212,8 @@
             ext: document.getElementById(`ext_${puid}`)?.value.trim() || '',
             fax: document.getElementById(`fax_${puid}`)?.value.trim() || '',
             duty: document.getElementById(`duty_${puid}`)?.value.trim() || '',
-            accountInfo: document.getElementById(`accountInfo_${puid}`)?.value.trim() || '',
-            accountPhoto: accountPhotoBase64Map[puid] || '',
+            accountInfo: '',
+            accountPhoto: '',
             email: document.getElementById(`email_${puid}`)?.value.trim() || '',
             address: document.getElementById(`address_${puid}`)?.value.trim() || '',
             remark: document.getElementById(`remark_${puid}`)?.value.trim() || '',
@@ -1173,8 +1233,8 @@
           const puid = row.getAttribute('data-puid');
           persons.push({
             puid,
-            personCompany: document.getElementById(`personCompany_${puid}`)?.value.trim() || '',
-            isActive: document.querySelector(`input[name="isActive_${puid}"]:checked`)?.value || 'es',
+            personCompany: '',
+            isActive: 'es',
             name: document.getElementById(`name_${puid}`)?.value.trim() || '',
             title: document.getElementById(`title_${puid}`)?.value.trim() || '',
             taxId: document.getElementById(`taxId_${puid}`)?.value.trim() || '',
@@ -1184,8 +1244,8 @@
             ext: document.getElementById(`ext_${puid}`)?.value.trim() || '',
             fax: document.getElementById(`fax_${puid}`)?.value.trim() || '',
             duty: document.getElementById(`duty_${puid}`)?.value.trim() || '',
-            accountInfo: document.getElementById(`accountInfo_${puid}`)?.value.trim() || '',
-            accountPhoto: accountPhotoBase64Map[puid] || '',
+            accountInfo: '',
+            accountPhoto: '',
             email: document.getElementById(`email_${puid}`)?.value.trim() || '',
             address: document.getElementById(`address_${puid}`)?.value.trim() || '',
             remark: document.getElementById(`remark_${puid}`)?.value.trim() || '',
@@ -1364,7 +1424,7 @@
           Object.values(vContacts).forEach(item => {
             const persons = item.persons || (item.name ? [item] : []);
             persons.forEach(c => {
-              if (c && c.cardImg && c.isActive !== 'no' && c.isActive !== '否') {
+              if (c && c.cardImg) {
                 contactCardsBtnHtml += `
                   <button onclick="openLightbox('${c.cardImg}')" class="text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition">
                     📇 ${c.name || '聯絡人'}名片
