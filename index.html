@@ -3,42 +3,70 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>採購廠商與工程聯繫資料管理系統</title>
+  <title>工程與採購聯繫管理系統</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .tab-btn.active {
-      border-bottom: 3px solid #059669;
-      color: #059669;
+      border-bottom: 3px solid #24433D;
+      color: #24433D;
       font-weight: 600;
     }
     .eng-tab-btn.active {
-      background-color: #059669;
+      background-color: #24433D;
       color: white;
       font-weight: 600;
+    }
+    .logo-hover-overlay {
+      opacity: 0;
+      transition: opacity 0.2s ease-in-out;
+    }
+    .logo-container:hover .logo-hover-overlay {
+      opacity: 1;
     }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800">
 
-  <!-- 頂部大選單 -->
-  <header class="bg-emerald-700 text-white shadow-md sticky top-0 z-50">
-    <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
-      <div class="flex items-center gap-2.5">
-        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='15' fill='%232c3e2d'/><path d='M30 30 L50 50 L30 70 M70 30 L50 50 L70 70' stroke='%23b8860b' stroke-width='12' fill='none'/></svg>" 
-             alt="Logo" class="w-8 h-8 rounded-lg shadow border border-emerald-600 bg-emerald-900 object-contain">
-        <h1 class="text-lg font-bold tracking-wide">工程與採購聯繫管理系統</h1>
-        <span id="syncStatusBadge" class="text-[11px] bg-emerald-800 text-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-500/50 flex items-center gap-1">
-          <span class="inline-block w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span> 雲端連線中
-        </span>
+  <!-- 頂部大選單 (採用名片墨綠底色 #24433D) -->
+  <header class="bg-[#24433D] text-white shadow-md sticky top-0 z-50 border-b border-[#18302B]">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center gap-4">
+        
+        <!-- LOGO 區域 (支援點擊 ➕ 自訂上傳與即時更換) -->
+        <div class="relative group logo-container">
+          <label for="customSystemLogoInput" class="cursor-pointer block relative rounded-xl overflow-hidden" title="點擊上傳 / 更換自訂 LOGO">
+            <img id="systemLogoImg" src="" alt="系統 Logo" class="h-16 w-auto max-w-[120px] object-contain shrink-0 drop-shadow-sm transition transform group-hover:scale-105">
+            
+            <!-- 滑鼠懸停顯示更換提示 -->
+            <div class="logo-hover-overlay absolute inset-0 bg-black/60 rounded-xl flex flex-col items-center justify-center text-white text-[10px] font-bold p-1">
+              <span class="text-base leading-none">➕</span>
+              <span>更換 LOGO</span>
+            </div>
+          </label>
+          
+          <input type="file" id="customSystemLogoInput" accept="image/*" class="hidden" onchange="handleSystemLogoUpload(event)">
+          
+          <!-- 重設預設 LOGO 小按鈕 -->
+          <button type="button" onclick="resetSystemLogo(event)" title="重設為預設 LOGO" class="logo-hover-overlay absolute -top-1 -right-1 bg-rose-600 hover:bg-rose-700 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px] shadow z-10">✕</button>
+        </div>
+
+        <div>
+          <h1 class="text-lg md:text-xl font-bold tracking-wide">工程與採購聯繫管理系統</h1>
+          <div class="flex items-center gap-2 mt-1">
+            <span id="syncStatusBadge" class="text-[11px] bg-[#18302B] text-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
+              <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 雲端連線中
+            </span>
+          </div>
+        </div>
       </div>
       
       <!-- 大系統切換按鈕 -->
-      <div class="flex items-center gap-2 bg-emerald-800/80 p-1 rounded-xl border border-emerald-600">
-        <button id="mainSysVendorBtn" onclick="switchSystem('vendor')" class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition text-emerald-100 hover:text-white">
+      <div class="flex items-center gap-2 bg-[#18302B]/80 p-1.5 rounded-xl border border-[#2d524b]">
+        <button id="mainSysVendorBtn" onclick="switchSystem('vendor')" class="px-4 py-2 rounded-lg text-sm font-semibold transition text-slate-200 hover:text-white">
           📋 採購廠商聯絡資料
         </button>
-        <button id="mainSysEngBtn" onclick="switchSystem('eng')" class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition bg-emerald-600 text-white shadow">
+        <button id="mainSysEngBtn" onclick="switchSystem('eng')" class="px-4 py-2 rounded-lg text-sm font-semibold transition bg-[#24433D] text-white shadow">
           🏛️ 工程聯繫資料
         </button>
       </div>
@@ -53,13 +81,13 @@
         <span>🔍</span> 廠商管理專區
       </div>
       <div class="flex flex-wrap items-center gap-2">
-        <button id="navQueryBtn" onclick="switchVendorView('query')" class="bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-800 transition flex items-center gap-1">
+        <button id="navQueryBtn" onclick="switchVendorView('query')" class="bg-[#24433D] text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-[#18302B] transition flex items-center gap-1">
           <span>🔍</span> 廠商查詢
         </button>
         <button id="navSiteBtn" onclick="switchVendorView('site')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 border">
           <span>🏗️</span> 案場廠商查詢
         </button>
-        <button id="navEditBtn" onclick="prepareCreateNewVendor()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-500 transition flex items-center gap-1">
+        <button id="navEditBtn" onclick="prepareCreateNewVendor()" class="bg-[#2d524b] text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-[#24433D] transition flex items-center gap-1">
           <span>➕</span> 建立 / 修改廠商
         </button>
       </div>
@@ -72,16 +100,16 @@
           <div class="md:col-span-2">
             <label class="block text-xs font-semibold text-slate-600 mb-1">關鍵字搜尋 (代號/名稱/統編/電話/項目/網址/聯絡人/會計)</label>
             <input type="text" id="queryKeyword" oninput="filterVendors()" placeholder="輸入關鍵字即時查詢..." 
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#24433D] outline-none">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">廠商類別</label>
-            <select id="queryCategory" onchange="filterVendors()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+            <select id="queryCategory" onchange="filterVendors()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#24433D] outline-none bg-white">
             </select>
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">配合狀態</label>
-            <select id="queryStatus" onchange="filterVendors()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+            <select id="queryStatus" onchange="filterVendors()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#24433D] outline-none bg-white">
               <option value="">全部狀態</option>
               <option value="配合中">配合中</option>
               <option value="長期配合">長期配合</option>
@@ -94,13 +122,13 @@
         <div class="flex justify-between items-center mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500">
           <span id="resultCount">共 0 筆資料</span>
           <div class="flex gap-2">
-            <button onclick="fetchCloudData(true)" class="text-emerald-700 hover:underline font-semibold flex items-center gap-1">
+            <button onclick="fetchCloudData(true)" class="text-[#24433D] hover:underline font-semibold flex items-center gap-1">
               <span>🔄</span> 手動重新整理雲端
             </button>
             <span>|</span>
-            <button onclick="exportData()" class="hover:text-emerald-700 underline">匯出備份 (JSON)</button>
+            <button onclick="exportData()" class="hover:text-[#24433D] underline">匯出備份 (JSON)</button>
             <span>|</span>
-            <label class="hover:text-emerald-700 underline cursor-pointer">
+            <label class="hover:text-[#24433D] underline cursor-pointer">
               匯入備份 <input type="file" onchange="importData(event)" class="hidden">
             </label>
           </div>
@@ -119,7 +147,7 @@
         <div class="flex gap-3">
           <div class="flex-1">
             <input type="text" id="siteSearchInput" oninput="renderSiteQuery()" placeholder="🔍 輸入案場名稱關鍵字..." 
-              class="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+              class="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#24433D] outline-none">
           </div>
           <button onclick="document.getElementById('siteSearchInput').value=''; renderSiteQuery();" class="px-3 py-2 text-xs bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 transition">清空</button>
         </div>
@@ -136,14 +164,14 @@
       <div class="bg-white p-5 md:p-7 rounded-2xl shadow-sm border border-slate-200">
         <div class="flex justify-between items-center pb-4 mb-4 border-b border-slate-200">
           <div>
-            <span id="formModeTag" class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">新增廠商</span>
+            <span id="formModeTag" class="text-xs bg-[#24433D]/10 text-[#24433D] font-bold px-2 py-0.5 rounded">新增廠商</span>
             <h2 id="formTitle" class="text-xl font-bold text-slate-800 mt-1">建立採購廠商資料</h2>
           </div>
           <button onclick="switchVendorView('query')" class="text-sm text-slate-500 hover:text-slate-800">✕ 返回查詢列表</button>
         </div>
 
         <form id="vendorForm" onsubmit="saveVendor(event)">
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-emerald-50 p-4 rounded-xl border border-emerald-100 mb-5">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 mb-5">
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">廠商代號 *</label>
               <input list="codeOptions" id="vCode" required onchange="handleCodeSelect(this.value)" placeholder="自動編號或選取..." 
@@ -188,7 +216,7 @@
             <div class="space-y-3 pt-2 border-t border-slate-200">
               <div class="flex justify-between items-center">
                 <h4 class="text-xs font-bold text-slate-700">👤 廠商聯絡人清單 (含名片)</h4>
-                <button type="button" onclick="addVendorContactCard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg shadow font-semibold transition flex items-center gap-1">
+                <button type="button" onclick="addVendorContactCard()" class="bg-[#24433D] hover:bg-[#18302B] text-white text-xs px-3 py-1.5 rounded-lg shadow font-semibold transition flex items-center gap-1">
                   <span>➕</span> 新增一位廠商聯絡人
                 </button>
               </div>
@@ -242,10 +270,10 @@
 
             <div class="space-y-3 pt-2 border-t border-slate-200 mt-2">
               <div class="flex justify-between items-center">
-                <h4 class="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                <h4 class="text-xs font-bold text-[#24433D] flex items-center gap-1.5">
                   <span>💼</span> 請款聯絡人清單 (含名片)
                 </h4>
-                <button type="button" onclick="addPaymentContactCard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg shadow font-semibold transition flex items-center gap-1">
+                <button type="button" onclick="addPaymentContactCard()" class="bg-[#24433D] hover:bg-[#18302B] text-white text-xs px-3 py-1.5 rounded-lg shadow font-semibold transition flex items-center gap-1">
                   <span>➕</span> 新增一位請款聯絡人
                 </button>
               </div>
@@ -269,7 +297,7 @@
             <button type="button" id="deleteVendorBtn" onclick="deleteCurrentVendor()" class="text-red-500 hover:text-red-700 text-sm hidden font-medium">刪除此廠商</button>
             <div class="ml-auto flex gap-3">
               <button type="button" onclick="switchVendorView('query')" class="px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50">返回清單</button>
-              <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2 rounded-lg text-sm shadow">確認儲存</button>
+              <button type="submit" class="bg-[#24433D] hover:bg-[#18302B] text-white font-bold px-6 py-2 rounded-lg text-sm shadow">確認儲存</button>
             </div>
           </div>
         </form>
@@ -287,9 +315,9 @@
         <button id="engTab_監造單位" onclick="switchEngCategory('監造單位')" class="eng-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-100 text-slate-700">監造單位</button>
         <button id="engTab_公家機關" onclick="switchEngCategory('公家機關')" class="eng-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-100 text-slate-700">公家機關</button>
         <button id="engTab_實驗室" onclick="switchEngCategory('實驗室')" class="eng-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-100 text-slate-700">實驗室</button>
-        <button id="engTab_siteQuery" onclick="switchEngCategory('siteQuery')" class="eng-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-blue-50 text-blue-700 border border-blue-200">🏗️ 案場工程查詢</button>
+        <button id="engTab_siteQuery" onclick="switchEngCategory('siteQuery')" class="eng-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-[#24433D]/10 text-[#24433D] border border-[#24433D]/20">🏗️ 案場工程查詢</button>
       </div>
-      <button onclick="prepareCreateNewEng()" class="bg-emerald-600 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-500 transition flex items-center gap-1">
+      <button onclick="prepareCreateNewEng()" class="bg-[#24433D] text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-[#18302B] transition flex items-center gap-1">
         <span id="createBtnIcon">➕</span> <span id="createBtnText">建立 / 修改主辦機關</span>
       </button>
     </div>
@@ -298,7 +326,7 @@
     <section id="viewEngQuery" class="space-y-4">
       <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
         <input type="text" id="engSearchInput" oninput="renderEngList()" placeholder="🔍 搜尋單位名稱、聯絡人、工程或電話..." 
-          class="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+          class="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#24433D] outline-none">
       </div>
       <div id="engResultContainer" class="space-y-4"></div>
     </section>
@@ -312,7 +340,7 @@
         <div class="flex gap-3">
           <div class="flex-1">
             <input type="text" id="engSiteSearchInput" oninput="renderEngSiteQuery()" placeholder="🔍 輸入工程名稱關鍵字..." 
-              class="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+              class="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#24433D] outline-none">
           </div>
           <button onclick="document.getElementById('engSiteSearchInput').value=''; renderEngSiteQuery();" class="px-3 py-2 text-xs bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 transition">清空</button>
         </div>
@@ -329,7 +357,7 @@
       <div class="bg-white p-5 md:p-7 rounded-2xl shadow-sm border border-slate-200">
         <div class="flex justify-between items-center pb-4 mb-4 border-b border-slate-200">
           <div>
-            <span id="engFormModeTag" class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">新增工程聯繫</span>
+            <span id="engFormModeTag" class="text-xs bg-[#24433D]/10 text-[#24433D] font-bold px-2 py-0.5 rounded">新增工程聯繫</span>
             <h2 id="engFormTitle" class="text-xl font-bold text-slate-800 mt-1">建立工程聯繫資料</h2>
           </div>
           <button onclick="switchEngView('query')" class="text-sm text-slate-500 hover:text-slate-800">✕ 返回列表</button>
@@ -393,17 +421,17 @@
           </div>
 
           <!-- 主辦機關與監造單位的獨立帳戶資訊與照片專區 -->
-          <div id="mainAccountSection" class="bg-blue-50/70 p-4 rounded-xl border border-blue-200 space-y-3">
-            <h4 class="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+          <div id="mainAccountSection" class="bg-[#24433D]/5 p-4 rounded-xl border border-[#24433D]/20 space-y-3">
+            <h4 class="text-xs font-bold text-[#24433D] flex items-center gap-1.5">
               <span>💳</span> 單位帳戶資訊與帳戶照片 (主辦 / 監造專用)
             </h4>
             <div class="grid grid-cols-1 gap-2">
               <label class="block text-xs font-semibold text-slate-600">帳戶資訊說明</label>
-              <textarea id="eMainAccountInfo" rows="3" class="w-full border border-blue-300 rounded p-2 text-sm bg-white" placeholder="請填寫銀行代號、分行、戶名、帳號..."></textarea>
+              <textarea id="eMainAccountInfo" rows="3" class="w-full border border-slate-300 rounded p-2 text-sm bg-white" placeholder="請填寫銀行代號、分行、戶名、帳號..."></textarea>
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">上傳帳戶照片 (存摺封面/截圖)</label>
-              <div class="border border-dashed border-blue-300 rounded-lg p-3 text-center bg-white">
+              <div class="border border-dashed border-slate-300 rounded-lg p-3 text-center bg-white">
                 <input type="file" id="eMainAccountPhotoInput" accept="image/*" class="text-xs mb-2" onchange="handleMainAccountPhotoUpload(event)">
                 <div class="relative cursor-pointer" onclick="openLightbox(currentMainAccountPhotoBase64)">
                   <img id="eMainAccountPhotoPreview" class="max-h-36 rounded shadow-sm hidden border mx-auto object-contain bg-white" alt="帳戶照片預覽">
@@ -417,7 +445,7 @@
           <div class="space-y-3 pt-2 border-t border-slate-200">
             <div class="flex justify-between items-center">
               <h4 class="text-xs font-bold text-slate-700">👤 工程聯絡人板塊 (每位交接人可個別指定所屬公司)</h4>
-              <button type="button" onclick="addEngContactCard()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg shadow font-semibold transition flex items-center gap-1">
+              <button type="button" onclick="addEngContactCard()" class="bg-[#24433D] hover:bg-[#18302B] text-white text-xs px-3 py-1.5 rounded-lg shadow font-semibold transition flex items-center gap-1">
                 <span>➕</span> 新增一位工程聯絡人板塊
               </button>
             </div>
@@ -443,7 +471,7 @@
             <button type="button" id="deleteEngBtn" onclick="deleteCurrentEngineering()" class="text-red-500 hover:text-red-700 text-sm hidden font-medium">刪除此筆資料</button>
             <div class="ml-auto flex gap-3">
               <button type="button" onclick="switchEngView('query')" class="px-4 py-2 border rounded-lg text-sm text-slate-600 hover:bg-slate-50">返回</button>
-              <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2 rounded-lg text-sm shadow">確認儲存</button>
+              <button type="submit" class="bg-[#24433D] hover:bg-[#18302B] text-white font-bold px-6 py-2 rounded-lg text-sm shadow">確認儲存</button>
             </div>
           </div>
         </form>
@@ -461,6 +489,35 @@
 
   <script>
     const CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbylVkL-CcxV7Qz-ChXPaChlyAhnJFp8yjTthwF2jiJgYZdtRU7vOHZVTmuRy77FwOw/exec";
+
+    // 預設翔奕營造透明向量 LOGO
+    const DEFAULT_XIANGYI_LOGO = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 178 245'><g transform='translate(89, 68)'><rect x='-55' y='-20' width='56' height='15' rx='3' transform='rotate(45 -55 -20)' fill='%239B5336'/><rect x='-20' y='-55' width='56' height='15' rx='3' transform='rotate(135 -20 -55)' fill='%239B5336'/><rect x='-30' y='-30' width='16' height='16' rx='2' transform='rotate(45 -30 -30)' fill='%239B5336'/><rect x='10' y='5' width='56' height='15' rx='3' transform='rotate(45 10 5)' fill='%239E8046'/><rect x='45' y='-30' width='56' height='15' rx='3' transform='rotate(135 45 -30)' fill='%239E8046'/><rect x='20' y='20' width='16' height='16' rx='2' transform='rotate(45 20 20)' fill='%239E8046'/></g><text x='89' y='178' font-family='Noto Sans TC, Microsoft JhengHei, sans-serif' font-weight='900' font-size='18' fill='%239E8046' text-anchor='middle' letter-spacing='0.5'>翔奕營造有限公司</text><text x='89' y='212' font-family='Arial Black, sans-serif' font-weight='900' font-size='24' fill='%239E8046' text-anchor='middle' letter-spacing='2.5'>XIANG YI</text><text x='89' y='234' font-family='Arial, sans-serif' font-weight='bold' font-size='9.5' fill='%239E8046' text-anchor='middle' letter-spacing='1'>CONSTRUCTION CO., LTD</text></svg>";
+
+    let currentSystemLogo = localStorage.getItem('custom_system_logo') || DEFAULT_XIANGYI_LOGO;
+    document.getElementById('systemLogoImg').src = currentSystemLogo;
+
+    function handleSystemLogoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        currentSystemLogo = e.target.result;
+        document.getElementById('systemLogoImg').src = currentSystemLogo;
+        localStorage.setItem('custom_system_logo', currentSystemLogo);
+        alert('LOGO 更換成功！');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function resetSystemLogo(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (confirm('確定重設為預設的翔奕營造 LOGO？')) {
+        currentSystemLogo = DEFAULT_XIANGYI_LOGO;
+        document.getElementById('systemLogoImg').src = currentSystemLogo;
+        localStorage.removeItem('custom_system_logo');
+      }
+    }
 
     let appData = JSON.parse(localStorage.getItem('combined_system_data')) || { vendors: [], engineering: [] };
     if (Array.isArray(appData)) {
@@ -538,7 +595,7 @@
                 <label class="text-[11px] text-slate-700 font-bold flex items-center gap-1">📇 聯絡人名片：</label>
                 <input type="file" id="cardInput_${uniqueId}" accept="image/*" class="text-xs text-slate-500 cursor-pointer" onchange="handleSingleContactCardUpload(event, '${uniqueId}')">
                 <div class="relative cursor-pointer" onclick="openLightbox(contactCardBase64Map['${uniqueId}'])" title="點擊放大檢視名片">
-                  <img id="cardPreview_${uniqueId}" class="h-10 max-w-[120px] rounded shadow-sm ${data.cardImg ? '' : 'hidden'} border bg-white object-contain hover:ring-2 hover:ring-emerald-500 transition" src="${data.cardImg || ''}" alt="名片預覽">
+                  <img id="cardPreview_${uniqueId}" class="h-10 max-w-[120px] rounded shadow-sm ${data.cardImg ? '' : 'hidden'} border bg-white object-contain hover:ring-2 hover:ring-[#24433D] transition" src="${data.cardImg || ''}" alt="名片預覽">
                 </div>
                 <button type="button" id="cardDelBtn_${uniqueId}" onclick="removeSingleContactCard('${uniqueId}')" class="text-[11px] text-red-600 hover:text-red-800 bg-red-50 border border-red-200 rounded px-2 py-0.5 ${data.cardImg ? '' : 'hidden'} font-medium">✕ 移除名片</button>
               </div>
@@ -558,15 +615,15 @@
             <button type="button" onclick="removePersonRow('${uniqueId}')" class="text-red-500 hover:text-red-700 text-xs px-2 py-0.5 rounded bg-red-50 border border-red-200 font-medium">✕ 移除此人</button>
           </div>
 
-          <div class="bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-200">
-            <label class="block text-[11px] font-bold text-emerald-900 mb-1">🏢 該聯絡人所屬的公司 / 單位名稱</label>
+          <div class="bg-[#24433D]/10 p-2.5 rounded-lg border border-[#24433D]/20">
+            <label class="block text-[11px] font-bold text-[#24433D] mb-1">🏢 該聯絡人所屬的公司 / 單位名稱</label>
             <input type="text" id="personCompany_${uniqueId}" value="${data.personCompany || ''}" placeholder="例如：臺南市南化區公所 / 臺南市南化區圖書館..." class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs font-bold text-slate-800">
           </div>
 
           <div class="flex items-center justify-between bg-slate-100 px-2.5 py-1 rounded">
             <span class="text-xs font-bold text-slate-700">💼 人員在職狀態：</span>
             <div class="flex items-center gap-3 text-xs">
-              <label class="cursor-pointer font-semibold text-emerald-700 flex items-center gap-1">
+              <label class="cursor-pointer font-semibold text-[#24433D] flex items-center gap-1">
                 <input type="radio" name="isActive_${uniqueId}" value="es" ${isActive === 'es' || isActive === '是' ? 'checked' : ''} onchange="togglePersonActive('${uniqueId}')"> 在職
               </label>
               <label class="cursor-pointer font-semibold text-rose-600 flex items-center gap-1">
@@ -594,14 +651,14 @@
               <textarea id="duty_${uniqueId}" rows="4" placeholder="請詳細填寫${dutyLabel}..." class="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white">${data.duty || ''}</textarea>
             </div>
 
-            <div class="pt-1 bg-blue-50/50 p-3 rounded-lg border border-blue-100 space-y-2 ${showPersonAccount ? '' : 'hidden'}">
-              <label class="block text-xs font-bold text-blue-900 mb-1">💳 聯絡人帳戶資訊與帳戶照片</label>
-              <textarea id="accountInfo_${uniqueId}" rows="3" placeholder="請填寫銀行代號、分行、戶名、帳號等完整資訊..." class="w-full border border-blue-300 rounded px-2.5 py-1.5 text-xs bg-white font-medium">${data.accountInfo || ''}</textarea>
-              <div class="flex flex-wrap items-center gap-3 pt-1 bg-white p-2 rounded border border-blue-200">
+            <div class="pt-1 bg-[#24433D]/5 p-3 rounded-lg border border-[#24433D]/20 space-y-2 ${showPersonAccount ? '' : 'hidden'}">
+              <label class="block text-xs font-bold text-[#24433D] mb-1">💳 聯絡人帳戶資訊與帳戶照片</label>
+              <textarea id="accountInfo_${uniqueId}" rows="3" placeholder="請填寫銀行代號、分行、戶名、帳號等完整資訊..." class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white font-medium">${data.accountInfo || ''}</textarea>
+              <div class="flex flex-wrap items-center gap-3 pt-1 bg-white p-2 rounded border border-slate-200">
                 <label class="text-xs text-slate-700 font-semibold">🖼️ 上傳帳戶照片：</label>
                 <input type="file" id="accountPhotoInput_${uniqueId}" accept="image/*" class="text-xs text-slate-500 cursor-pointer" onchange="handleAccountPhotoUpload(event, '${uniqueId}')">
                 <div class="relative cursor-pointer" onclick="openLightbox(accountPhotoBase64Map['${uniqueId}'])" title="點擊放大檢視帳戶照片">
-                  <img id="accountPhotoPreview_${uniqueId}" class="h-14 max-w-[160px] rounded shadow-sm ${data.accountPhoto ? '' : 'hidden'} border bg-white object-contain hover:ring-2 hover:ring-blue-500 transition" src="${data.accountPhoto || ''}" alt="帳戶照片預覽">
+                  <img id="accountPhotoPreview_${uniqueId}" class="h-14 max-w-[160px] rounded shadow-sm ${data.accountPhoto ? '' : 'hidden'} border bg-white object-contain hover:ring-2 hover:ring-[#24433D] transition" src="${data.accountPhoto || ''}" alt="帳戶照片預覽">
                 </div>
                 <button type="button" id="accountPhotoDelBtn_${uniqueId}" onclick="removeAccountPhoto('${uniqueId}')" class="text-xs text-red-600 hover:text-red-800 bg-red-50 border border-red-200 rounded px-2 py-1 ${data.accountPhoto ? '' : 'hidden'} font-medium">✕ 移除帳戶照片</button>
               </div>
@@ -625,7 +682,7 @@
               <label class="text-[11px] text-slate-700 font-bold flex items-center gap-1">📇 聯絡人名片：</label>
               <input type="file" id="cardInput_${uniqueId}" accept="image/*" class="text-xs text-slate-500 cursor-pointer" onchange="handleSingleContactCardUpload(event, '${uniqueId}')">
               <div class="relative cursor-pointer" onclick="openLightbox(contactCardBase64Map['${uniqueId}'])" title="點擊放大檢視名片">
-                <img id="cardPreview_${uniqueId}" class="h-10 max-w-[120px] rounded shadow-sm ${data.cardImg ? '' : 'hidden'} border bg-white object-contain hover:ring-2 hover:ring-emerald-500 transition" src="${data.cardImg || ''}" alt="名片預覽">
+                <img id="cardPreview_${uniqueId}" class="h-10 max-w-[120px] rounded shadow-sm ${data.cardImg ? '' : 'hidden'} border bg-white object-contain hover:ring-2 hover:ring-[#24433D] transition" src="${data.cardImg || ''}" alt="名片預覽">
               </div>
               <button type="button" id="cardDelBtn_${uniqueId}" onclick="removeSingleContactCard('${uniqueId}')" class="text-[11px] text-red-600 hover:text-red-800 bg-red-50 border border-red-200 rounded px-2 py-0.5 ${data.cardImg ? '' : 'hidden'} font-medium">✕ 移除名片</button>
             </div>
@@ -730,15 +787,15 @@
 
         ${isVendor ? '' : `
         <div class="pt-1 flex justify-end">
-          <button type="button" onclick="addHandoverPersonToCard('${uid}')" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] px-3 py-1 rounded font-semibold transition flex items-center gap-1 shadow-sm">
+          <button type="button" onclick="addHandoverPersonToCard('${uid}')" class="bg-[#24433D] hover:bg-[#18302B] text-white text-[11px] px-3 py-1 rounded font-semibold transition flex items-center gap-1 shadow-sm">
             <span>➕</span> 在此下方新增交接聯絡人
           </button>
         </div>
 
-        <div class="space-y-3 bg-emerald-50/40 p-3 rounded-lg border border-emerald-200/60 mt-2 ${showSiteUnits ? '' : 'hidden'}">
+        <div class="space-y-3 bg-[#24433D]/5 p-3 rounded-lg border border-[#24433D]/20 mt-2 ${showSiteUnits ? '' : 'hidden'}">
           <div class="flex justify-between items-center">
-            <label class="block text-[11px] font-bold text-emerald-900">📍 此聯絡人板塊負責的案場與對應使用單位清單</label>
-            <button type="button" onclick="addSiteWithUnitInputByCardUid('${uid}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] px-2.5 py-1 rounded font-semibold transition">＋ 新增案場與使用單位</button>
+            <label class="block text-[11px] font-bold text-[#24433D]">📍 此聯絡人板塊負責的案場與對應使用單位清單</label>
+            <button type="button" onclick="addSiteWithUnitInputByCardUid('${uid}')" class="bg-[#24433D] hover:bg-[#18302B] text-white text-[11px] px-2.5 py-1 rounded font-semibold transition">＋ 新增案場與使用單位</button>
           </div>
           <div id="sitesList_${uid}" class="space-y-3"></div>
         </div>
@@ -800,7 +857,7 @@
       const container = document.getElementById(`sitesList_${cardUid}`);
       if (!container) return;
       const row = document.createElement('div');
-      row.className = "site-unit-row bg-white p-3 rounded-lg border border-emerald-200/80 space-y-2 relative shadow-sm";
+      row.className = "site-unit-row bg-white p-3 rounded-lg border border-slate-200 space-y-2 relative shadow-sm";
       row.innerHTML = `
         <div class="flex gap-2 items-center">
           <input type="text" value="${su.siteName || ''}" placeholder="輸入案場名稱..." class="site-name-input-${cardUid} flex-1 border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white font-medium">
@@ -926,13 +983,13 @@
       const badge = document.getElementById('syncStatusBadge');
       if (!badge) return;
       if (status === 'syncing') {
-        badge.className = "text-[11px] bg-amber-800 text-amber-100 px-2.5 py-0.5 rounded-full border border-amber-500/50 flex items-center gap-1";
+        badge.className = "text-[11px] bg-amber-900 text-amber-100 px-2.5 py-0.5 rounded-full border border-amber-500/50 flex items-center gap-1.5 shadow-sm";
         badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-amber-300 animate-ping"></span> ${text}`;
       } else if (status === 'online') {
-        badge.className = "text-[11px] bg-emerald-800 text-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-500/50 flex items-center gap-1";
-        badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-300"></span> ${text}`;
+        badge.className = "text-[11px] bg-[#18302B] text-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1.5 shadow-sm";
+        badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span> ${text}`;
       } else if (status === 'error') {
-        badge.className = "text-[11px] bg-rose-800 text-rose-100 px-2.5 py-0.5 rounded-full border border-rose-500/50 flex items-center gap-1";
+        badge.className = "text-[11px] bg-rose-900 text-rose-100 px-2.5 py-0.5 rounded-full border border-rose-500/50 flex items-center gap-1.5 shadow-sm";
         badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-rose-300"></span> ${text}`;
       }
     }
@@ -989,16 +1046,16 @@
     function switchSystem(sys) {
       document.getElementById('sysVendorContainer').classList.add('hidden');
       document.getElementById('sysEngContainer').classList.add('hidden');
-      document.getElementById('mainSysVendorBtn').className = "px-3.5 py-1.5 rounded-lg text-sm font-semibold transition text-emerald-100 hover:text-white";
-      document.getElementById('mainSysEngBtn').className = "px-3.5 py-1.5 rounded-lg text-sm font-semibold transition text-emerald-100 hover:text-white";
+      document.getElementById('mainSysVendorBtn').className = "px-4 py-2 rounded-lg text-sm font-semibold transition text-slate-200 hover:text-white";
+      document.getElementById('mainSysEngBtn').className = "px-4 py-2 rounded-lg text-sm font-semibold transition text-slate-200 hover:text-white";
 
       if (sys === 'vendor') {
         document.getElementById('sysVendorContainer').classList.remove('hidden');
-        document.getElementById('mainSysVendorBtn').className = "px-3.5 py-1.5 rounded-lg text-sm font-semibold transition bg-emerald-600 text-white shadow";
+        document.getElementById('mainSysVendorBtn').className = "px-4 py-2 rounded-lg text-sm font-semibold transition bg-[#24433D] text-white shadow";
         filterVendors();
       } else {
         document.getElementById('sysEngContainer').classList.remove('hidden');
-        document.getElementById('mainSysEngBtn').className = "px-3.5 py-1.5 rounded-lg text-sm font-semibold transition bg-emerald-600 text-white shadow";
+        document.getElementById('mainSysEngBtn').className = "px-4 py-2 rounded-lg text-sm font-semibold transition bg-[#24433D] text-white shadow";
         renderEngList();
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1015,15 +1072,15 @@
 
       if (view === 'query') {
         document.getElementById('viewVendorQuery').classList.remove('hidden');
-        document.getElementById('navQueryBtn').className = "bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-800 transition";
+        document.getElementById('navQueryBtn').className = "bg-[#24433D] text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-[#18302B] transition";
         filterVendors();
       } else if (view === 'site') {
         document.getElementById('viewVendorSite').classList.remove('hidden');
-        document.getElementById('navSiteBtn').className = "bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-500 transition";
+        document.getElementById('navSiteBtn').className = "bg-[#24433D] text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-[#18302B] transition";
         renderSiteQuery();
       } else {
         document.getElementById('viewVendorEdit').classList.remove('hidden');
-        document.getElementById('navEditBtn').className = "bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-emerald-800 transition";
+        document.getElementById('navEditBtn').className = "bg-[#24433D] text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow hover:bg-[#18302B] transition";
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -1034,7 +1091,7 @@
         const btn = document.getElementById(`engTab_${c}`);
         if (btn) {
           if (c === 'siteQuery') {
-            btn.className = "eng-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-blue-50 text-blue-700 border border-blue-200";
+            btn.className = "eng-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-[#24433D]/10 text-[#24433D] border border-[#24433D]/20";
           } else {
             btn.className = "eng-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-100 text-slate-700";
           }
@@ -1043,7 +1100,7 @@
 
       const activeBtn = document.getElementById(`engTab_${cat}`);
       if (activeBtn) {
-        activeBtn.className = "eng-tab-btn active px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-emerald-600 text-white shadow";
+        activeBtn.className = "eng-tab-btn active px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-[#24433D] text-white shadow";
       }
 
       const createBtnText = document.getElementById('createBtnText');
@@ -1422,9 +1479,9 @@
         sec.className = "bg-white p-5 rounded-2xl border shadow-sm space-y-3";
         sec.innerHTML = `
           <div class="flex items-center gap-2 pb-2 border-b">
-            <span class="w-2 h-5 bg-emerald-600 rounded-full inline-block"></span>
+            <span class="w-2 h-5 bg-[#24433D] rounded-full inline-block"></span>
             <h3 class="font-bold text-slate-800 text-base">${cName}</h3>
-            <span class="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">${list.length} 家</span>
+            <span class="text-xs bg-[#24433D]/10 text-[#24433D] font-semibold px-2 py-0.5 rounded-full border border-[#24433D]/20">${list.length} 家</span>
           </div>
         `;
         const grid = document.createElement('div');
@@ -1441,7 +1498,7 @@
             persons.forEach(c => {
               if (c && c.cardImg) {
                 contactCardsBtnHtml += `
-                  <button onclick="openLightbox('${c.cardImg}')" class="text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition">
+                  <button onclick="openLightbox('${c.cardImg}')" class="text-xs text-[#24433D] bg-[#24433D]/10 hover:bg-[#24433D]/20 border border-[#24433D]/30 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition">
                     📇 ${c.name || '聯絡人'}名片
                   </button>
                 `;
@@ -1456,7 +1513,7 @@
               webUrl = 'https://' + webUrl;
             }
             websiteBtnHtml = `
-              <a href="${webUrl}" target="_blank" class="text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition">
+              <a href="${webUrl}" target="_blank" class="text-xs text-[#24433D] bg-[#24433D]/10 hover:bg-[#24433D]/20 border border-[#24433D]/30 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition">
                 🌐 公司網址
               </a>
             `;
@@ -1465,10 +1522,10 @@
           const vActiveList = Array.isArray(v.isActive) ? v.isActive : (typeof v.isActive === 'string' ? v.isActive.split(',').map(s => s.trim()) : [v.isActive || '配合中']);
           let badgesHtml = '';
           vActiveList.forEach(val => {
-            let statusBadgeClass = 'text-emerald-600 bg-emerald-100';
+            let statusBadgeClass = 'text-[#24433D] bg-[#24433D]/15';
             let statusText = `● ${val}`;
             if (val === '長期配合') {
-              statusBadgeClass = 'text-blue-700 bg-blue-100';
+              statusBadgeClass = 'text-amber-800 bg-amber-100';
               statusText = `★ ${val}`;
             } else if (val === '已停止' || val === '否') {
               statusBadgeClass = 'text-rose-500 bg-rose-100';
@@ -1488,15 +1545,15 @@
               </div>
               <h4 class="font-bold text-slate-800 mt-2">${v.name}</h4>
               <p class="text-xs text-slate-600 mt-1">施工項目：${v.workItems || '未填寫'}</p>
-              ${v.tel ? `<p class="text-xs text-slate-600 mt-1">📞 市話：<a href="tel:${v.tel}" class="text-emerald-600 font-medium">${v.tel}</a></p>` : ''}
+              ${v.tel ? `<p class="text-xs text-slate-600 mt-1">📞 市話：<a href="tel:${v.tel}" class="text-[#24433D] font-medium">${v.tel}</a></p>` : ''}
             </div>
             <div class="mt-3 pt-2 border-t flex flex-wrap justify-between items-center gap-2">
               <div class="flex flex-wrap items-center gap-1.5">
-                ${v.cardImg ? `<button onclick="openLightbox('${v.cardImg}')" class="text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition">🏢 公司名片</button>` : ''}
+                ${v.cardImg ? `<button onclick="openLightbox('${v.cardImg}')" class="text-xs text-[#24433D] bg-[#24433D]/10 hover:bg-[#24433D]/20 border border-[#24433D]/30 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition">🏢 公司名片</button>` : ''}
                 ${websiteBtnHtml}
                 ${contactCardsBtnHtml}
               </div>
-              <button onclick="loadVendorToEdit('${v.id}')" class="bg-slate-800 text-white text-xs px-3 py-1 rounded transition">✏️ 編輯</button>
+              <button onclick="loadVendorToEdit('${v.id}')" class="bg-[#18302B] text-white text-xs px-3 py-1 rounded transition">✏️ 編輯</button>
             </div>
           `;
           grid.appendChild(card);
@@ -1527,7 +1584,7 @@
       Object.keys(siteMap).slice(0, 10).forEach(key => {
         const item = siteMap[key];
         const b = document.createElement('button');
-        b.className = "text-xs bg-slate-100 hover:bg-emerald-100 text-slate-700 px-2.5 py-1 rounded-full border";
+        b.className = "text-xs bg-slate-100 hover:bg-[#24433D]/10 text-slate-700 px-2.5 py-1 rounded-full border";
         b.innerText = item.title;
         b.onclick = () => { document.getElementById('siteSearchInput').value = item.title; renderSiteQuery(); };
         badgesContainer.appendChild(b);
@@ -1545,7 +1602,7 @@
         card.className = "bg-white p-4 rounded-xl border shadow-sm space-y-3";
         card.innerHTML = `
           <div class="flex items-center gap-2 border-b pb-2">
-            <span class="w-2 h-5 bg-emerald-600 rounded-full inline-block"></span>
+            <span class="w-2 h-5 bg-[#24433D] rounded-full inline-block"></span>
             <h3 class="font-bold text-slate-800">📍 ${data.title} (${data.vendors.length}家廠商)</h3>
           </div>
         `;
@@ -1613,10 +1670,10 @@
         card.innerHTML = `
           <div class="flex items-center justify-between pb-2 border-b">
             <div class="flex items-center gap-2">
-              <span class="w-2 h-5 bg-emerald-600 rounded-full inline-block"></span>
+              <span class="w-2 h-5 bg-[#24433D] rounded-full inline-block"></span>
               <h3 class="font-bold text-slate-800 text-base">工程案場：${projName}</h3>
             </div>
-            <span class="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">${entries.length} 筆紀錄</span>
+            <span class="text-xs bg-[#24433D]/10 text-[#24433D] font-semibold px-2 py-0.5 rounded-full border border-[#24433D]/20">${entries.length} 筆紀錄</span>
           </div>
         `;
 
@@ -1626,16 +1683,16 @@
           inner.className = "bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-3 relative";
           
           let infoHtml = '';
-          if (it.tel) infoHtml += `<p>📞 市話：<a href="tel:${it.tel}" class="text-emerald-600 font-medium">${it.tel}</a></p>`;
+          if (it.tel) infoHtml += `<p>📞 市話：<a href="tel:${it.tel}" class="text-[#24433D] font-medium">${it.tel}</a></p>`;
           if (it.fax) infoHtml += `<p>📠 傳真：${it.fax}</p>`;
           if (it.companyAddress1) infoHtml += `<p class="md:col-span-2">🏢 公司地址(1)：${it.companyAddress1}</p>`;
-          if (it.docAddress1) infoHtml += `<p class="md:col-span-2 text-blue-700 font-medium">✉️ 文件寄送(1)：${it.docAddress1}</p>`;
+          if (it.docAddress1) infoHtml += `<p class="md:col-span-2 text-[#24433D] font-medium">✉️ 文件寄送(1)：${it.docAddress1}</p>`;
           
           if ((activeEngCategory === '主辦機關' || activeEngCategory === '監造單位') && (it.mainAccountInfo || it.mainAccountPhoto)) {
             infoHtml += `
-              <div class="md:col-span-2 bg-blue-50 p-2.5 rounded border border-blue-200 mt-1">
-                <p class="font-bold text-blue-900">💳 單位帳戶資訊：${it.mainAccountInfo || '未填寫'}</p>
-                ${it.mainAccountPhoto ? `<div class="mt-1"><button onclick="openLightbox('${it.mainAccountPhoto}')" class="text-[11px] text-blue-600 underline font-medium">🖼️ 查看單位帳戶照片</button></div>` : ''}
+              <div class="md:col-span-2 bg-[#24433D]/10 p-2.5 rounded border border-[#24433D]/20 mt-1">
+                <p class="font-bold text-[#24433D]">💳 單位帳戶資訊：${it.mainAccountInfo || '未填寫'}</p>
+                ${it.mainAccountPhoto ? `<div class="mt-1"><button onclick="openLightbox('${it.mainAccountPhoto}')" class="text-[11px] text-[#24433D] underline font-medium">🖼️ 查看單位帳戶照片</button></div>` : ''}
               </div>
             `;
           }
@@ -1705,13 +1762,13 @@
                           <span class="font-bold text-slate-700">${c.name}</span> ${c.title ? `(${c.title})` : ''}
                         </div>
                         <div class="space-x-2 text-slate-600">
-                          ${c.tel ? `<span>📞 <a href="tel:${c.tel}" class="text-emerald-600 font-medium">${c.tel}</a></span>` : ''}
+                          ${c.tel ? `<span>📞 <a href="tel:${c.tel}" class="text-[#24433D] font-medium">${c.tel}</a></span>` : ''}
                           ${c.ext ? `<span>分機: ${c.ext}</span>` : ''}
                         </div>
                       </div>
                       ${c.duty ? `<div class="text-slate-600 whitespace-pre-line mt-1">${dutyLabel}：${c.duty}</div>` : ''}
-                      ${showPersonAccount && c.accountInfo ? `<div class="text-blue-800 font-medium mt-1">💳 帳戶資訊：${c.accountInfo}</div>` : ''}
-                      ${showPersonAccount && c.accountPhoto ? `<div class="mt-1"><button onclick="openLightbox('${c.accountPhoto}')" class="text-[11px] text-blue-600 underline font-medium">🖼️ 查看帳戶照片</button></div>` : ''}
+                      ${showPersonAccount && c.accountInfo ? `<div class="text-[#24433D] font-medium mt-1">💳 帳戶資訊：${c.accountInfo}</div>` : ''}
+                      ${showPersonAccount && c.accountPhoto ? `<div class="mt-1"><button onclick="openLightbox('${c.accountPhoto}')" class="text-[11px] text-[#24433D] underline font-medium">🖼️ 查看帳戶照片</button></div>` : ''}
                       ${c.remark ? `<div class="text-slate-500 italic mt-1">備註：${c.remark}</div>` : ''}
                     </div>
                   `;
@@ -1721,17 +1778,17 @@
                       <div class="flex flex-wrap gap-2 items-center justify-between border-b pb-1">
                         <div><span class="font-bold text-slate-800 text-sm">👤 ${c.name}</span> ${c.title ? `(${c.title})` : ''}</div>
                         <div class="space-x-2 text-slate-600">
-                          ${c.mobile ? `<span>📱 <a href="tel:${c.mobile}" class="text-emerald-600 font-medium">${c.mobile}</a></span>` : ''}
-                          ${c.tel ? `<span>📞 <a href="tel:${c.tel}" class="text-emerald-600 font-medium">${c.tel}</a></span>` : ''}
+                          ${c.mobile ? `<span>📱 <a href="tel:${c.mobile}" class="text-[#24433D] font-medium">${c.mobile}</a></span>` : ''}
+                          ${c.tel ? `<span>📞 <a href="tel:${c.tel}" class="text-[#24433D] font-medium">${c.tel}</a></span>` : ''}
                           ${c.ext ? `<span>分機: ${c.ext}</span>` : ''}
                         </div>
                       </div>
                       ${c.duty ? `<div class="text-slate-700 whitespace-pre-line">${dutyLabel}：${c.duty}</div>` : ''}
-                      ${showPersonAccount && c.accountInfo ? `<div class="text-blue-800 font-medium">💳 帳戶資訊：${c.accountInfo}</div>` : ''}
-                      ${showPersonAccount && c.accountPhoto ? `<div><button onclick="openLightbox('${c.accountPhoto}')" class="text-[11px] text-blue-600 underline font-medium">🖼️ 查看帳戶照片</button></div>` : ''}
+                      ${showPersonAccount && c.accountInfo ? `<div class="text-[#24433D] font-medium">💳 帳戶資訊：${c.accountInfo}</div>` : ''}
+                      ${showPersonAccount && c.accountPhoto ? `<div><button onclick="openLightbox('${c.accountPhoto}')" class="text-[11px] text-[#24433D] underline font-medium">🖼️ 查看帳戶照片</button></div>` : ''}
                       ${c.email ? `<p class="text-slate-500">✉️ E-mail: ${c.email}</p>` : ''}
                       ${c.remark ? `<p class="text-slate-500 italic">備註：${c.remark}</p>` : ''}
-                      ${c.cardImg ? `<div><button onclick="openLightbox('${c.cardImg}')" class="text-[11px] text-emerald-600 underline font-medium">📇 查看聯絡人名片</button></div>` : ''}
+                      ${c.cardImg ? `<div><button onclick="openLightbox('${c.cardImg}')" class="text-[11px] text-[#24433D] underline font-medium">📇 查看聯絡人名片</button></div>` : ''}
                     </div>
                   `;
                 }
@@ -1739,7 +1796,7 @@
 
               companiesHtml += `
                 <div class="bg-white p-3 rounded-lg border border-slate-200 text-xs space-y-2 mb-2 shadow-sm">
-                  <div class="text-xs font-bold text-emerald-900 bg-emerald-100 px-2.5 py-1.5 rounded-md border border-emerald-300 mb-2 flex items-center gap-1.5">
+                  <div class="text-xs font-bold text-[#24433D] bg-[#24433D]/10 px-2.5 py-1.5 rounded-md border border-[#24433D]/20 mb-2 flex items-center gap-1.5">
                     <span>🏢</span> 公司/單位名稱：${compName}
                   </div>
                   ${personsListHtml}
@@ -1750,8 +1807,8 @@
             let unitHeaderHtml = '';
             if (showSiteUnits && (su.useName || su.useTel || su.useAddress)) {
               unitHeaderHtml = `
-                <div class="bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-200 mb-3 text-slate-700 space-y-0.5">
-                  <p class="font-bold text-emerald-900">🏢 使用單位：${su.useName || ''} ${su.useContact ? `(${su.useContact})` : ''}</p>
+                <div class="bg-[#24433D]/10 p-2.5 rounded-lg border border-[#24433D]/20 mb-3 text-slate-700 space-y-0.5">
+                  <p class="font-bold text-[#24433D]">🏢 使用單位：${su.useName || ''} ${su.useContact ? `(${su.useContact})` : ''}</p>
                   <p class="text-xs text-slate-600">電話：${su.useTel || ''} ${su.useExt ? `分機：${su.useExt}` : ''} ${su.useFax ? `傳真：${su.useFax}` : ''}</p>
                   ${su.useAddress ? `<p class="text-xs text-slate-600">地址：${su.useAddress}</p>` : ''}
                 </div>
@@ -1766,7 +1823,7 @@
             `;
           });
 
-          let engCardBtnHtml = it.cardImg ? `<button onclick="openLightbox('${it.cardImg}')" class="text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition inline-flex">🏢 主單位名片</button>` : '';
+          let engCardBtnHtml = it.cardImg ? `<button onclick="openLightbox('${it.cardImg}')" class="text-xs text-[#24433D] bg-[#24433D]/10 hover:bg-[#24433D]/20 border border-[#24433D]/30 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition inline-flex">🏢 主單位名片</button>` : '';
 
           inner.innerHTML = `
             <div class="flex justify-between items-start">
@@ -1775,7 +1832,7 @@
               </div>
               <div class="flex items-center gap-2">
                 ${engCardBtnHtml}
-                <button onclick="loadEngineeringToEdit('${it.id}')" class="bg-slate-800 hover:bg-slate-900 text-white text-xs px-3 py-1 rounded-lg">✏️ 編輯</button>
+                <button onclick="loadEngineeringToEdit('${it.id}')" class="bg-[#18302B] hover:bg-[#24433D] text-white text-xs px-3 py-1 rounded-lg">✏️ 編輯</button>
               </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-1 text-xs text-slate-600">
@@ -1824,7 +1881,7 @@
 
       Object.keys(siteMap).slice(0, 10).forEach(projName => {
         const b = document.createElement('button');
-        b.className = "text-xs bg-slate-100 hover:bg-emerald-100 text-slate-700 px-2.5 py-1 rounded-full border";
+        b.className = "text-xs bg-slate-100 hover:bg-[#24433D]/10 text-slate-700 px-2.5 py-1 rounded-full border";
         b.innerText = projName;
         b.onclick = () => { document.getElementById('engSiteSearchInput').value = projName; renderEngSiteQuery(); };
         badgesContainer.appendChild(b);
@@ -1842,7 +1899,7 @@
         card.className = "bg-white p-5 rounded-2xl border shadow-sm space-y-3";
         card.innerHTML = `
           <div class="flex items-center gap-2 border-b pb-2">
-            <span class="w-2 h-5 bg-emerald-600 rounded-full inline-block"></span>
+            <span class="w-2 h-5 bg-[#24433D] rounded-full inline-block"></span>
             <h3 class="font-bold text-slate-800 text-base">📍 工程案場：${projName} (${items.length} 個單位)</h3>
           </div>
         `;
@@ -1862,13 +1919,13 @@
           grid.innerHTML += `
             <div class="bg-slate-50 p-3.5 rounded-xl border flex flex-col justify-between text-xs space-y-1">
               <div>
-                <span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">${it.category}</span>
+                <span class="bg-[#24433D]/10 text-[#24433D] font-bold px-2 py-0.5 rounded text-[10px]">${it.category}</span>
                 <h4 class="font-bold text-slate-800 text-sm mt-1">${it.name}</h4>
                 ${firstContact ? `<p class="text-slate-600">聯絡人：${firstContact}</p>` : ''}
                 ${addrText ? `<p class="text-slate-500">地址：${addrText}</p>` : ''}
               </div>
               <div class="pt-2 border-t flex justify-end">
-                <button onclick="loadEngineeringToEdit('${it.id}')" class="bg-slate-800 text-white px-2.5 py-1 rounded text-[11px]">✏️ 編輯</button>
+                <button onclick="loadEngineeringToEdit('${it.id}')" class="bg-[#18302B] text-white px-2.5 py-1 rounded text-[11px]">✏️ 編輯</button>
               </div>
             </div>
           `;
@@ -1882,7 +1939,7 @@
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
       const a = document.createElement('a');
       a.href = dataStr;
-      a.download = `採購與工程系統備份_${new Date().toISOString().slice(0,10)}.json`;
+      a.download = `工程與採購聯繫系統備份_${new Date().toISOString().slice(0,10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
     }
 
