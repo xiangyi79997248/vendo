@@ -78,14 +78,14 @@
       <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div class="md:col-span-2">
-            <label class="block text-xs font-semibold text-slate-600 mb-1">關鍵字搜尋 (代號/類別/名稱/統編/電話/項目/網址/聯絡人/會計)</label>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">關鍵字搜尋 (代號/名稱/統編/電話/項目/網址/聯絡人/會計)</label>
             <input type="text" id="queryKeyword" oninput="filterVendors()" placeholder="輸入關鍵字即時查詢..." 
               class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#24433D] outline-none">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">廠商類別 (可輸入或選取)</label>
-            <input list="queryCategoryOptions" id="queryCategory" oninput="filterVendors()" placeholder="輸入或選取類別..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#24433D] outline-none bg-white">
-            <datalist id="queryCategoryOptions"></datalist>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">廠商類別</label>
+            <select id="queryCategory" onchange="filterVendors()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#24433D] outline-none bg-white">
+            </select>
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">配合狀態</label>
@@ -160,7 +160,7 @@
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">廠商名稱 *</label>
-              <input type="text" id="vName" required onblur="handleVendorNameCheck(this.value)" placeholder="輸入廠商名稱..." class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-sm">
+              <input type="text" id="vName" required class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-sm">
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">統一編號</label>
@@ -284,6 +284,7 @@
       </div>
     </section>
   </div>
+
 
   <!-- ==================== 子系統 B：工程聯繫資料 ==================== -->
   <div id="sysEngContainer" class="max-w-5xl mx-auto p-4 md:p-6 space-y-4">
@@ -1546,32 +1547,16 @@
       const matched = appData.vendors.find(v => v.code === code.trim());
       if (matched && matched.id !== currentVendorEditId) loadVendorToEdit(matched.id);
     }
-
-    // 檢查廠商名稱是否重複，若重複則提示並自動叫出資料
-    function handleVendorNameCheck(name) {
-      const cleanName = (name || '').trim();
-      if (!cleanName) return;
-
-      const matched = appData.vendors.find(v => v.name && v.name.trim().toLowerCase() === cleanName.toLowerCase() && v.id !== currentVendorEditId);
-      if (matched) {
-        const confirmLoad = confirm(`⚠️ 系統中已存在名為「${matched.name}」(代號: ${matched.code || '無'}) 的廠商！\n\n是否直接載入該廠商資料進行修改？`);
-        if (confirmLoad) {
-          loadVendorToEdit(matched.id);
-        } else {
-          document.getElementById('vName').value = '';
-          document.getElementById('vName').focus();
-        }
-      }
-    }
-
     function refreshCategoryOptions() {
       const cats = Array.from(new Set(appData.vendors.map(v => v.category?.trim()).filter(Boolean)));
-      
       const dl = document.getElementById('categoryOptions');
       if (dl) dl.innerHTML = cats.map(c => `<option value="${c}">`).join('');
-      
-      const qdl = document.getElementById('queryCategoryOptions');
-      if (qdl) qdl.innerHTML = cats.map(c => `<option value="${c}">`).join('');
+      const sel = document.getElementById('queryCategory');
+      if (sel) {
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">全部類別</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        sel.value = cur;
+      }
     }
 
     function prepareCreateNewVendor() {
@@ -1608,13 +1593,6 @@
       const code = document.getElementById('vCode').value.trim();
       const name = document.getElementById('vName').value.trim();
       if (!code || !name) { alert('代號與名稱為必填'); return; }
-
-      // 儲存前二次檢查重複名稱（排除本身）
-      const dup = appData.vendors.find(v => v.name && v.name.trim().toLowerCase() === name.toLowerCase() && v.id !== currentVendorEditId);
-      if (dup) {
-        alert(`❌ 已存在相同名稱之廠商「${dup.name}」(代號: ${dup.code || ''})，請勿重複建立！`);
-        return;
-      }
 
       const contactsObj = {};
       const cardDivs = document.querySelectorAll('#vendorContactsContainer > .contact-main-card');
@@ -1977,26 +1955,13 @@
     }
 
     function filterVendors() {
-      const kw = (document.getElementById('queryKeyword')?.value || '').trim().toLowerCase();
-      const cat = (document.getElementById('queryCategory')?.value || '').trim().toLowerCase();
-      const st = document.getElementById('queryStatus')?.value || '';
+      const kw = document.getElementById('queryKeyword').value.toLowerCase();
+      const cat = document.getElementById('queryCategory').value;
+      const st = document.getElementById('queryStatus').value;
 
       const filtered = appData.vendors.filter(v => {
-        let contactNames = [];
-        if (v.contacts) {
-          Object.values(v.contacts).forEach(cObj => {
-            (cObj.persons || []).forEach(p => {
-              if (p.name) contactNames.push(p.name);
-              if (p.mobile) contactNames.push(p.mobile);
-              if (p.title) contactNames.push(p.title);
-            });
-          });
-        }
-
-        // 關鍵字比對：包含 代號、名稱、類別、統編、項目、電話、網址、聯絡人資訊
-        const matchKw = !kw || [v.name, v.code, v.category, v.taxId, v.workItems, v.tel, v.website, ...contactNames].some(x => x && x.toLowerCase().includes(kw));
-        // 類別比對：輸入關鍵字包含比對 或 精確比對
-        const matchCat = !cat || (v.category && v.category.toLowerCase().includes(cat));
+        const matchKw = !kw || [v.name, v.code, v.taxId, v.workItems, v.tel, v.website].some(x => x && x.toLowerCase().includes(kw));
+        const matchCat = !cat || v.category === cat;
         const vActiveList = Array.isArray(v.isActive) ? v.isActive : (typeof v.isActive === 'string' ? v.isActive.split(',').map(s => s.trim()) : [v.isActive || '配合中']);
         const matchSt = !st || vActiveList.includes(st);
         return matchKw && matchCat && matchSt;
@@ -2277,7 +2242,7 @@
                     </div>
                   </div>
                   ${c.duty ? `<div class="text-slate-700 whitespace-pre-line">${dutyLabel}：${c.duty}</div>` : ''}
-                  ${showPersonAccount && c.accountInfo ? `<div class="text-[#24433D] font-medium mt-1">💳 帳戶資訊：${c.accountInfo}</div>` : ''}
+                  ${showPersonAccount && c.accountInfo ? `<div class="text-[#24433D] font-medium">💳 帳戶資訊：${c.accountInfo}</div>` : ''}
                   ${showPersonAccount && c.accountPhoto ? `<div><button onclick="event.stopPropagation(); openLightbox('${c.accountPhoto}')" class="text-[11px] text-[#24433D] underline font-medium">🖼️ 查看帳戶照片</button></div>` : ''}
                   ${c.email ? `<p class="text-slate-500">✉️ E-mail: ${c.email}</p>` : ''}
                   ${c.remark ? `<p class="text-slate-500 italic">備註：${c.remark}</p>` : ''}
