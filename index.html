@@ -78,7 +78,7 @@
       <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div class="md:col-span-2">
-            <label class="block text-xs font-semibold text-slate-600 mb-1">關鍵字搜尋 (類別/代號/名稱/統編/電話/項目/網址/聯絡人/會計)</label>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">關鍵字搜尋 (代號/類別/名稱/統編/電話/項目/網址/聯絡人/會計)</label>
             <input type="text" id="queryKeyword" oninput="filterVendors()" placeholder="輸入關鍵字即時查詢..." 
               class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#24433D] outline-none">
           </div>
@@ -160,7 +160,7 @@
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">廠商名稱 *</label>
-              <input type="text" id="vName" required onblur="handleVendorNameCheck(this.value)" placeholder="輸入廠商名稱..." class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-sm">
+              <input type="text" id="vName" required onchange="checkDuplicateVendorName(this.value)" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-sm">
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">統一編號</label>
@@ -315,7 +315,7 @@
     <section id="viewEngSiteQuery" class="hidden space-y-4">
       <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200">
         <h2 class="text-base font-bold text-slate-800 mb-1">🏗️ 工程案場與相關單位反查</h2>
-        <p class="text-xs text-slate-500 mb-3">輸入工程案場關鍵字，自動找出該工程對應的主辦、監造、公家機關與實驗室明細。</p>
+        <p class="text-xs text-slate-500 mb-3">輸入工程案場關鍵字，自動找出該工程對應的主辦與監造明細。</p>
         
         <div class="flex gap-3">
           <div class="flex-1">
@@ -994,54 +994,34 @@
     async function fetchCloudData(isManual = false) {
       updateBadge('syncing', '雲端同步中...');
       try {
-        const response = await fetch(CLOUD_API_URL + '?t=' + Date.now(), {
-          method: 'GET',
-          mode: 'cors',
-          redirect: 'follow',
-          cache: 'no-store'
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP 錯誤: ${response.status}`);
-        }
-
+        const response = await fetch(CLOUD_API_URL + '?t=' + Date.now(), { method: 'GET' });
         const text = await response.text();
-        if (text && text.trim() !== "" && text.trim() !== "[]") {
-          let cloudParsed;
-          try {
-            cloudParsed = JSON.parse(text);
-          } catch (pErr) {
-            console.warn("雲端回傳非有效 JSON", text);
+        if (text && text !== "[]") {
+          const cloudParsed = JSON.parse(text);
+          if (Array.isArray(cloudParsed)) {
+            appData = { vendors: cloudParsed, engineering: [] };
+          } else if (cloudParsed && typeof cloudParsed === 'object') {
+            appData = {
+              vendors: Array.isArray(cloudParsed.vendors) ? cloudParsed.vendors : [],
+              engineering: Array.isArray(cloudParsed.engineering) ? cloudParsed.engineering : []
+            };
           }
-
-          if (cloudParsed) {
-            if (Array.isArray(cloudParsed)) {
-              appData = { vendors: cloudParsed, engineering: [] };
-            } else if (typeof cloudParsed === 'object') {
-              appData = {
-                vendors: Array.isArray(cloudParsed.vendors) ? cloudParsed.vendors : [],
-                engineering: Array.isArray(cloudParsed.engineering) ? cloudParsed.engineering : []
-              };
-            }
-            localStorage.setItem('combined_system_data', JSON.stringify(appData));
-            refreshCategoryOptions();
-            refreshCodeOptions();
-            filterVendors();
-            renderSiteQuery();
-            renderEngList();
-            renderEngSiteQuery();
-            updateBadge('online', '雲端已同步');
-            if (isManual) alert(`同步成功！共有廠商 ${appData.vendors.length} 筆、工程聯繫 ${appData.engineering.length} 筆。`);
-            return;
-          }
+          localStorage.setItem('combined_system_data', JSON.stringify(appData));
+          refreshCategoryOptions();
+          refreshCodeOptions();
+          filterVendors();
+          renderSiteQuery();
+          renderEngList();
+          renderEngSiteQuery();
+          updateBadge('online', '雲端已同步');
+          if (isManual) alert(`同步成功！共有廠商 ${appData.vendors.length} 筆、工程聯繫 ${appData.engineering.length} 筆。`);
+          return;
         }
-        
-        await syncToCloud();
+        syncToCloud();
         updateBadge('online', '已初始化雲端');
       } catch (err) {
-        console.error("雲端同步失敗：", err);
         updateBadge('error', '離線暫存模式');
-        if (isManual) alert('雲端連線失敗，目前顯示本機快取資料。');
+        if (isManual) alert('雲端連線失敗，目前顯示本機快取。');
       }
     }
 
@@ -1056,7 +1036,6 @@
         });
         updateBadge('online', '雲端已儲存');
       } catch (err) {
-        console.error("雲端儲存失敗：", err);
         updateBadge('error', '雲端儲存失敗(已存本機)');
       }
     }
@@ -1505,7 +1484,7 @@
 
         <div>
           <h4 class="font-bold text-slate-800 text-sm mb-2 flex items-center gap-1.5">
-            <span>👥</span> 案場相關聯絡人與公司板塊
+            <span>👥</span> 聯絡人與公司板塊
           </h4>
           ${siteUnitHtml || '<p class="text-xs text-slate-400">尚無聯絡人板塊資料</p>'}
         </div>
@@ -1564,25 +1543,19 @@
       const dl = document.getElementById('codeOptions');
       if (dl) dl.innerHTML = appData.vendors.filter(v => v.code).map(v => `<option value="${v.code}">${v.name || ''}</option>`).join('');
     }
-    
     function handleCodeSelect(code) {
       const matched = appData.vendors.find(v => v.code === code.trim());
       if (matched && matched.id !== currentVendorEditId) loadVendorToEdit(matched.id);
     }
 
-    // 檢查廠商名稱是否重複，若重複則提示並自動叫出資料
-    function handleVendorNameCheck(name) {
-      const cleanName = (name || '').trim();
+    function checkDuplicateVendorName(inputName) {
+      const cleanName = (inputName || '').trim();
       if (!cleanName) return;
-
-      const matched = appData.vendors.find(v => v.name && v.name.trim().toLowerCase() === cleanName.toLowerCase() && v.id !== currentVendorEditId);
+      const matched = appData.vendors.find(v => v.name && v.name.trim() === cleanName && v.id !== currentVendorEditId);
       if (matched) {
-        const confirmLoad = confirm(`⚠️ 系統中已存在名為「${matched.name}」(代號: ${matched.code || '無'}) 的廠商！\n\n是否直接載入該廠商資料進行修改？`);
+        const confirmLoad = confirm(`⚠️ 系統中已存在名為「${matched.name}」的廠商資料（代號：${matched.code || '無'}）！\n\n請問是否直接載入該廠商資料進行修改？`);
         if (confirmLoad) {
           loadVendorToEdit(matched.id);
-        } else {
-          document.getElementById('vName').value = '';
-          document.getElementById('vName').focus();
         }
       }
     }
@@ -1632,11 +1605,11 @@
       const name = document.getElementById('vName').value.trim();
       if (!code || !name) { alert('代號與名稱為必填'); return; }
 
-      // 儲存前二次檢查重複名稱（排除本身）
-      const dup = appData.vendors.find(v => v.name && v.name.trim().toLowerCase() === name.toLowerCase() && v.id !== currentVendorEditId);
-      if (dup) {
-        alert(`❌ 已存在相同名稱之廠商「${dup.name}」(代號: ${dup.code || ''})，請勿重複建立！`);
-        return;
+      const dupVendor = appData.vendors.find(v => v.name && v.name.trim() === name && v.id !== currentVendorEditId);
+      if (dupVendor) {
+        const proceed = confirm(`⚠️ 系統中已有同名廠商「${dupVendor.name}」（代號：${dupVendor.code}）。\n\n按下「確定」將直接覆蓋/更新該筆現有廠商資料；按下「取消」請修改廠商名稱。`);
+        if (!proceed) return;
+        currentVendorEditId = dupVendor.id;
       }
 
       const contactsObj = {};
@@ -2005,20 +1978,7 @@
       const st = document.getElementById('queryStatus')?.value || '';
 
       const filtered = appData.vendors.filter(v => {
-        let contactNames = [];
-        if (v.contacts) {
-          Object.values(v.contacts).forEach(cObj => {
-            (cObj.persons || []).forEach(p => {
-              if (p.name) contactNames.push(p.name);
-              if (p.mobile) contactNames.push(p.mobile);
-              if (p.title) contactNames.push(p.title);
-            });
-          });
-        }
-
-        // 關鍵字比對：包含 代號、名稱、類別、統編、項目、電話、網址、聯絡人資訊
-        const matchKw = !kw || [v.name, v.code, v.category, v.taxId, v.workItems, v.tel, v.website, ...contactNames].some(x => x && x.toLowerCase().includes(kw));
-        // 類別比對：輸入關鍵字包含比對 或 精確比對
+        const matchKw = !kw || [v.name, v.code, v.category, v.taxId, v.workItems, v.tel, v.website].some(x => x && x.toLowerCase().includes(kw));
         const matchCat = !cat || (v.category && v.category.toLowerCase().includes(cat));
         const vActiveList = Array.isArray(v.isActive) ? v.isActive : (typeof v.isActive === 'string' ? v.isActive.split(',').map(s => s.trim()) : [v.isActive || '配合中']);
         const matchSt = !st || vActiveList.includes(st);
@@ -2294,18 +2254,17 @@
                   <div class="flex flex-wrap gap-2 items-center justify-between border-b pb-1">
                     <div><span class="font-bold text-slate-800 text-sm">👤 ${c.name}</span> ${c.title ? `(${c.title})` : ''}</div>
                     <div class="space-x-2 text-slate-600">
-                      ${c.mobile ? `<span>📱 <a href="tel:${c.mobile}" class="text-emerald-700 font-medium">${c.mobile}</a></span>` : ''}
-                      ${c.tel ? `<span>📞 <a href="tel:${c.tel}" class="text-emerald-700 font-medium">${c.tel}</a></span>` : ''}
+                      ${c.mobile ? `<span>📱 <a href="tel:${c.mobile}" onclick="event.stopPropagation()" class="text-[#24433D] font-medium">${c.mobile}</a></span>` : ''}
+                      ${c.tel ? `<span>📞 <a href="tel:${c.tel}" onclick="event.stopPropagation()" class="text-[#24433D] font-medium">${c.tel}</a></span>` : ''}
                       ${c.ext ? `<span>分機: ${c.ext}</span>` : ''}
                     </div>
                   </div>
-                  ${c.duty ? `<div class="text-slate-700 whitespace-pre-line bg-slate-50 p-2 rounded border border-slate-200 mt-1">📌 ${dutyLabel}：${c.duty}</div>` : ''}
+                  ${c.duty ? `<div class="text-slate-700 whitespace-pre-line">${dutyLabel}：${c.duty}</div>` : ''}
                   ${showPersonAccount && c.accountInfo ? `<div class="text-[#24433D] font-medium mt-1">💳 帳戶資訊：${c.accountInfo}</div>` : ''}
                   ${showPersonAccount && c.accountPhoto ? `<div><button onclick="openLightbox('${c.accountPhoto}')" class="text-[11px] text-[#24433D] underline font-medium">🖼️ 查看帳戶照片</button></div>` : ''}
                   ${c.email ? `<p class="text-slate-500">✉️ E-mail: ${c.email}</p>` : ''}
-                  ${c.address ? `<p class="text-slate-500">📍 地址: ${c.address}</p>` : ''}
                   ${c.remark ? `<p class="text-slate-500 italic">備註：${c.remark}</p>` : ''}
-                  ${c.cardImg ? `<div class="pt-1"><button onclick="event.stopPropagation(); openLightbox('${c.cardImg}')" class="text-xs text-[#24433D] bg-[#24433D]/10 hover:bg-[#24433D]/20 border border-[#24433D]/30 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition inline-flex">📇 查看聯絡人名片</button></div>` : ''}
+                  ${c.cardImg ? `<div><button onclick="event.stopPropagation(); openLightbox('${c.cardImg}')" class="text-[11px] text-[#24433D] underline font-medium">📇 查看聯絡人名片</button></div>` : ''}
                 </div>
               `;
             }
@@ -2356,7 +2315,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-1 text-xs text-slate-600">
           ${infoHtml}
         </div>
-        ${siteUnitHtml ? `<div class="space-y-2 pt-2 border-t"><p class="text-[11px] font-semibold text-slate-500">本案場相關聯絡人與公司分類：</p>${siteUnitHtml}</div>` : ''}
+        ${siteUnitHtml ? `<div class="space-y-2 pt-2 border-t"><p class="text-[11px] font-semibold text-slate-500">相關聯絡人與公司板塊：</p>${siteUnitHtml}</div>` : ''}
       `;
     }
 
@@ -2376,7 +2335,6 @@
         return;
       }
 
-      // 如果是「實驗室」或「公家機關」，直接以純列表顯示，不按案場分組
       if (activeEngCategory === '實驗室' || activeEngCategory === '公家機關') {
         const sec = document.createElement('div');
         sec.className = "bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4";
@@ -2405,7 +2363,6 @@
         return;
       }
 
-      // 主辦機關與監造單位：維持按工程案場分組
       const siteGroupMap = {};
 
       list.forEach(item => {
@@ -2602,3 +2559,4 @@
   </script>
 </body>
 </html>
+```[cite: 1]
