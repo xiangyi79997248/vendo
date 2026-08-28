@@ -462,7 +462,6 @@
   <!-- 廠商詳細檢視 Modal -->
   <div id="vendorDetailModal" onclick="closeVendorDetailModal()" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-3 md:p-6 backdrop-blur-sm">
     <div class="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden" onclick="event.stopPropagation()">
-      <!-- 彈窗頂部 -->
       <div class="bg-[#24433D] text-white px-5 py-4 flex justify-between items-center shrink-0">
         <div class="flex items-center gap-2.5">
           <span id="mCodeBadge" class="bg-white/20 text-white text-xs px-2.5 py-0.5 rounded font-mono font-bold"></span>
@@ -476,8 +475,6 @@
           <button onclick="closeVendorDetailModal()" class="text-white hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center text-lg">✕</button>
         </div>
       </div>
-      
-      <!-- 彈窗內容 (可滾動) -->
       <div id="vendorDetailContent" class="p-5 md:p-6 overflow-y-auto space-y-5 text-sm"></div>
     </div>
   </div>
@@ -485,7 +482,6 @@
   <!-- 工程聯繫詳細檢視 Modal -->
   <div id="engDetailModal" onclick="closeEngDetailModal()" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-3 md:p-6 backdrop-blur-sm">
     <div class="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden" onclick="event.stopPropagation()">
-      <!-- 彈窗頂部 -->
       <div class="bg-[#24433D] text-white px-5 py-4 flex justify-between items-center shrink-0">
         <div class="flex items-center gap-2.5">
           <span id="eMCategoryBadge" class="bg-white/20 text-white text-xs px-2.5 py-0.5 rounded font-bold"></span>
@@ -499,8 +495,6 @@
           <button onclick="closeEngDetailModal()" class="text-white hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center text-lg">✕</button>
         </div>
       </div>
-      
-      <!-- 彈窗內容 (可滾動) -->
       <div id="engDetailContent" class="p-5 md:p-6 overflow-y-auto space-y-5 text-sm"></div>
     </div>
   </div>
@@ -1311,7 +1305,6 @@
       document.getElementById('vendorDetailModal').classList.add('hidden');
     }
 
-    // 開啟工程聯繫詳細檢視視窗
     function openEngDetailModal(id) {
       const it = (appData.engineering || []).find(item => item.id === id);
       if (!it) return;
@@ -1605,7 +1598,6 @@
       const name = document.getElementById('vName').value.trim();
       if (!code || !name) { alert('代號與名稱為必填'); return; }
 
-      // 儲存前重複名稱防呆確認
       const dupVendor = appData.vendors.find(v => v.name && v.name.trim() === name && v.id !== currentVendorEditId);
       if (dupVendor) {
         const proceed = confirm(`⚠️ 系統中已有同名廠商「${dupVendor.name}」（代號：${dupVendor.code}）。\n\n按下「確定」將直接覆蓋/更新該筆現有廠商資料；按下「取消」請修改廠商名稱。`);
@@ -1979,9 +1971,7 @@
       const st = document.getElementById('queryStatus')?.value || '';
 
       const filtered = appData.vendors.filter(v => {
-        // 關鍵字比對：包含 代號、名稱、類別、統編、項目、電話、網址
         const matchKw = !kw || [v.name, v.code, v.category, v.taxId, v.workItems, v.tel, v.website].some(x => x && x.toLowerCase().includes(kw));
-        // 類別比對：輸入關鍵字包含比對 或 精確比對
         const matchCat = !cat || (v.category && v.category.toLowerCase().includes(cat));
         const vActiveList = Array.isArray(v.isActive) ? v.isActive : (typeof v.isActive === 'string' ? v.isActive.split(',').map(s => s.trim()) : [v.isActive || '配合中']);
         const matchSt = !st || vActiveList.includes(st);
@@ -2338,7 +2328,6 @@
         return;
       }
 
-      // 如果是「實驗室」或「公家機關」，直接以純列表顯示，不按案場分組
       if (activeEngCategory === '實驗室' || activeEngCategory === '公家機關') {
         const sec = document.createElement('div');
         sec.className = "bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4";
@@ -2367,7 +2356,6 @@
         return;
       }
 
-      // 主辦機關與監造單位：維持按工程案場分組
       const siteGroupMap = {};
 
       list.forEach(item => {
