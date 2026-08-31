@@ -1019,7 +1019,6 @@
       }
     }
 
-    // 關鍵修改：移除 no-cors，改用 redirect: "follow" 以確保手機端也能雙向寫入
     async function syncToCloud() {
       updateBadge('syncing', '正在儲存至雲端...');
       try {
@@ -2536,10 +2535,13 @@
     addPaymentContactCard();
     refreshCategoryOptions();
     refreshCodeOptions();
-    filterVendors();
-    renderEngList();
-    renderEngSiteQuery();
-    fetchCloudData();
+
+    // 核心修改：強制先從雲端抓取最新資料，成功後再渲染畫面，防止手機持續卡在舊的本機快取
+    fetchCloudData().then(() => {
+      filterVendors();
+      renderEngList();
+      renderEngSiteQuery();
+    });
   </script>
 </body>
 </html>
