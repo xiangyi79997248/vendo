@@ -985,7 +985,6 @@
       }
     }
 
-    // 改用傳統 AJAX (XMLHttpRequest) 確保手機端讀取不會被安全阻擋
     function fetchCloudData(isManual = false) {
       updateBadge('syncing', '雲端同步中...');
       
@@ -1033,7 +1032,6 @@
       xhr.send();
     }
 
-    // 改用傳統 AJAX 確保手機端寫入不會被安全阻擋
     function syncToCloud() {
       updateBadge('syncing', '正在儲存至雲端...');
       
@@ -1473,7 +1471,7 @@
             ${it.companyAddress2 ? `<p>📍 公司地址(2)：${it.companyAddress2}</p>` : ''}
             ${it.docAddress1 ? `<p class="text-[#24433D] font-medium">✉️ 文件寄送(1)：${it.docAddress1}</p>` : ''}
             ${it.docAddress2 ? `<p class="text-[#24433D]">✉️ 文件寄送(2)：${it.docAddress2}</p>` : ''}
-            ${it.remark ? `<p class="pt-1 text-slate-500 italic">📝 備註：${it.remark}</p>` : ''}
+            ${it.remark ? `<p class="pt-1 text-slate-700 font-medium bg-amber-50/60 p-2 rounded border border-amber-200">📝 備註說明：${it.remark}</p>` : ''}
           </div>
           
           <div class="flex flex-col items-center justify-center border-t md:border-t-0 md:border-l md:pl-4 border-slate-200">
@@ -2171,6 +2169,11 @@
       if (it.companyAddress1) infoHtml += `<p class="md:col-span-2">🏢 公司地址(1)：${it.companyAddress1}</p>`;
       if (it.docAddress1) infoHtml += `<p class="md:col-span-2 text-[#24433D] font-medium">✉️ 文件寄送(1)：${it.docAddress1}</p>`;
       
+      // 讓備註直接顯示在外面小卡片中
+      if (it.remark) {
+        infoHtml += `<p class="md:col-span-2 text-slate-700 font-medium bg-amber-50/70 p-2 rounded border border-amber-200 mt-1">📝 備註：${it.remark}</p>`;
+      }
+      
       if ((activeEngCategory === '主辦機關' || activeEngCategory === '監造單位') && (it.mainAccountInfo || it.mainAccountPhoto)) {
         infoHtml += `
           <div class="md:col-span-2 bg-[#24433D]/10 p-2.5 rounded border border-[#24433D]/20 mt-1">
@@ -2332,7 +2335,7 @@
 
       const list = (appData.engineering || []).filter(item => {
         const matchCat = item.category === activeEngCategory;
-        const matchKw = !kw || [item.name, item.projectName, item.taxId, item.tel, item.fax].some(x => x && x.toLowerCase().includes(kw));
+        const matchKw = !kw || [item.name, item.projectName, item.taxId, item.tel, item.fax, item.remark].some(x => x && x.toLowerCase().includes(kw));
         return matchCat && matchKw;
       });
 
