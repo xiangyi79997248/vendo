@@ -847,23 +847,62 @@
     function addSiteWithUnitInputByCardUid(cardUid, su = {}) {
       const container = document.getElementById(`sitesList_${cardUid}`);
       if (!container) return;
+      const rowId = 'su_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
       const row = document.createElement('div');
       row.className = "site-unit-row bg-white p-3 rounded-lg border border-slate-200 space-y-2 relative shadow-sm";
+      row.id = rowId;
       row.innerHTML = `
         <div class="flex gap-2 items-center">
           <input type="text" value="${su.siteName || ''}" placeholder="輸入案場名稱..." class="site-name-input-${cardUid} flex-1 border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white font-medium">
-          <button type="button" onclick="this.closest('.site-unit-row').remove()" class="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded bg-red-50 border border-red-200">✕ 刪除此案場</button>
+          <button type="button" onclick="document.getElementById('${rowId}').remove()" class="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded bg-red-50 border border-red-200">✕ 刪除此案場</button>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
           <input type="text" value="${su.useName || ''}" placeholder="使用單位名稱" class="site-usename-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs md:col-span-2">
-          <input type="text" value="${su.useTel || ''}" placeholder="電話" class="site-usetel-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          <input type="text" value="${su.useTel || ''}" placeholder="單位電話" class="site-usetel-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs">
           <input type="text" value="${su.useExt || ''}" placeholder="分機" class="site-useext-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs">
           <input type="text" value="${su.useFax || ''}" placeholder="傳真" class="site-usefax-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs">
-          <input type="text" value="${su.useContact || ''}" placeholder="使用單位聯絡人" class="site-usecontact-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs">
-          <input type="text" value="${su.useAddress || ''}" placeholder="使用單位地址" class="site-useaddress-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs md:col-span-2">
+          <input type="text" value="${su.useAddress || ''}" placeholder="使用單位地址" class="site-useaddress-input-${cardUid} w-full border border-slate-300 rounded px-2 py-1 text-xs md:col-span-3">
+        </div>
+
+        <div class="pt-2 border-t border-slate-100 space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-[11px] font-bold text-slate-700">👥 使用單位聯絡人清單 (可新增多位)：</span>
+            <button type="button" onclick="addUseUnitContact('${rowId}')" class="bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] px-2 py-0.5 rounded font-semibold">＋ 新增使用單位聯絡人</button>
+          </div>
+          <div id="useContactsContainer_${rowId}" class="space-y-1.5"></div>
         </div>
       `;
       container.appendChild(row);
+
+      // 載入該單位的聯絡人（若有舊資料或相容舊的 useContact）
+      const ucContainer = document.getElementById(`useContactsContainer_${rowId}`);
+      let contactsArr = su.useContacts || [];
+      if (contactsArr.length === 0 && su.useContact) {
+        contactsArr = [{ name: su.useContact, title: '', mobile: '', tel: '' }];
+      }
+      if (contactsArr.length === 0) {
+        contactsArr = [{}]; // 預設給一個空白聯絡人欄位
+      }
+      contactsArr.forEach(uc => {
+        addUseUnitContact(rowId, uc);
+      });
+    }
+
+    function addUseUnitContact(rowId, uc = {}) {
+      const container = document.getElementById(`useContactsContainer_${rowId}`);
+      if (!container) return;
+      const ucId = 'uc_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+      const div = document.createElement('div');
+      div.className = "flex gap-1.5 items-center bg-slate-50 p-1.5 rounded border border-slate-200 use-contact-item";
+      div.id = ucId;
+      div.innerHTML = `
+        <input type="text" value="${uc.name || ''}" placeholder="姓名 *" class="uc-name w-24 border border-slate-300 rounded px-2 py-1 text-xs bg-white font-medium">
+        <input type="text" value="${uc.title || ''}" placeholder="職稱" class="uc-title w-20 border border-slate-300 rounded px-2 py-1 text-xs bg-white">
+        <input type="text" value="${uc.mobile || ''}" placeholder="手機" class="uc-mobile w-28 border border-slate-300 rounded px-2 py-1 text-xs bg-white">
+        <input type="text" value="${uc.tel || ''}" placeholder="電話/分機" class="uc-tel flex-1 border border-slate-300 rounded px-2 py-1 text-xs bg-white">
+        <button type="button" onclick="document.getElementById('${ucId}').remove()" class="text-red-500 hover:text-red-700 text-xs px-1.5 py-0.5 rounded bg-red-50">✕</button>
+      `;
+      container.appendChild(div);
     }
 
     function handleSingleContactCardUpload(event, uniqueId) {
@@ -1441,12 +1480,25 @@
         });
 
         let unitHeaderHtml = '';
-        if (showSiteUnits && (su.useName || su.useTel || su.useAddress)) {
+        if (showSiteUnits && (su.useName || su.useTel || su.useAddress || (su.useContacts && su.useContacts.length > 0))) {
+          let ucHtml = '';
+          const ucList = su.useContacts || (su.useContact ? [{ name: su.useContact }] : []);
+          if (ucList.length > 0) {
+            ucHtml = `<div class="mt-2 pt-2 border-t border-[#24433D]/20 space-y-1"><span class="font-bold text-[#24433D]">👥 使用單位聯絡人：</span><div class="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-1">`;
+            ucList.forEach(uc => {
+              if (uc.name) {
+                ucHtml += `<div class="bg-white p-1.5 rounded border border-slate-200 text-xs"><b>${uc.name}</b> ${uc.title ? `(${uc.title})` : ''} ${uc.mobile ? `📱 <a href="tel:${uc.mobile}" class="text-emerald-700">${uc.mobile}</a>` : ''} ${uc.tel ? `📞 ${uc.tel}` : ''}</div>`;
+              }
+            });
+            ucHtml += `</div></div>`;
+          }
+
           unitHeaderHtml = `
             <div class="bg-[#24433D]/10 p-3 rounded-lg border border-[#24433D]/20 mb-3 text-slate-700 space-y-1 text-xs">
-              <p class="font-bold text-[#24433D] text-sm">🏢 使用單位：${su.useName || ''} ${su.useContact ? `(${su.useContact})` : ''}</p>
+              <p class="font-bold text-[#24433D] text-sm">🏢 使用單位：${su.useName || ''}</p>
               <p class="text-slate-600">電話：${su.useTel || ''} ${su.useExt ? `分機：${su.useExt}` : ''} ${su.useFax ? `傳真：${su.useFax}` : ''}</p>
               ${su.useAddress ? `<p class="text-slate-600">地址：${su.useAddress}</p>` : ''}
+              ${ucHtml}
             </div>
           `;
         }
@@ -1907,14 +1959,25 @@
 
         const siteUnits = [];
         cardDiv.querySelectorAll('.site-unit-row').forEach(sRow => {
+          const sRowId = sRow.id;
+          const useContacts = [];
+          sRow.querySelectorAll('.use-contact-item').forEach(ucItem => {
+            useContacts.push({
+              name: ucItem.querySelector('.uc-name')?.value.trim() || '',
+              title: ucItem.querySelector('.uc-title')?.value.trim() || '',
+              mobile: ucItem.querySelector('.uc-mobile')?.value.trim() || '',
+              tel: ucItem.querySelector('.uc-tel')?.value.trim() || ''
+            });
+          });
+
           siteUnits.push({
             siteName: sRow.querySelector(`.site-name-input-${cardUid}`)?.value.trim() || '',
             useName: sRow.querySelector(`.site-usename-input-${cardUid}`)?.value.trim() || '',
             useTel: sRow.querySelector(`.site-usetel-input-${cardUid}`)?.value.trim() || '',
             useExt: sRow.querySelector(`.site-useext-input-${cardUid}`)?.value.trim() || '',
             useFax: sRow.querySelector(`.site-usefax-input-${cardUid}`)?.value.trim() || '',
-            useContact: sRow.querySelector(`.site-usecontact-input-${cardUid}`)?.value.trim() || '',
-            useAddress: sRow.querySelector(`.site-useaddress-input-${cardUid}`)?.value.trim() || ''
+            useAddress: sRow.querySelector(`.site-useaddress-input-${cardUid}`)?.value.trim() || '',
+            useContacts: useContacts
           });
         });
 
@@ -2169,7 +2232,6 @@
       if (it.companyAddress1) infoHtml += `<p class="md:col-span-2">🏢 公司地址(1)：${it.companyAddress1}</p>`;
       if (it.docAddress1) infoHtml += `<p class="md:col-span-2 text-[#24433D] font-medium">✉️ 文件寄送(1)：${it.docAddress1}</p>`;
       
-      // 讓備註直接顯示在外面小卡片中
       if (it.remark) {
         infoHtml += `<p class="md:col-span-2 text-slate-700 font-medium bg-amber-50/70 p-2 rounded border border-amber-200 mt-1">📝 備註：${it.remark}</p>`;
       }
@@ -2290,12 +2352,25 @@
         });
 
         let unitHeaderHtml = '';
-        if (showSiteUnits && (su.useName || su.useTel || su.useAddress)) {
+        if (showSiteUnits && (su.useName || su.useTel || su.useAddress || (su.useContacts && su.useContacts.length > 0))) {
+          let ucHtml = '';
+          const ucList = su.useContacts || (su.useContact ? [{ name: su.useContact }] : []);
+          if (ucList.length > 0) {
+            ucHtml = `<div class="mt-2 pt-2 border-t border-[#24433D]/20 space-y-1"><span class="font-bold text-[#24433D]">👥 使用單位聯絡人：</span><div class="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-1">`;
+            ucList.forEach(uc => {
+              if (uc.name) {
+                ucHtml += `<div class="bg-white p-1.5 rounded border border-slate-200 text-xs"><b>${uc.name}</b> ${uc.title ? `(${uc.title})` : ''} ${uc.mobile ? `📱 <a href="tel:${uc.mobile}" onclick="event.stopPropagation()" class="text-emerald-700">${uc.mobile}</a>` : ''} ${uc.tel ? `📞 ${uc.tel}` : ''}</div>`;
+              }
+            });
+            ucHtml += `</div></div>`;
+          }
+
           unitHeaderHtml = `
             <div class="bg-[#24433D]/10 p-2.5 rounded-lg border border-[#24433D]/20 mb-3 text-slate-700 space-y-0.5">
-              <p class="font-bold text-[#24433D]">🏢 使用單位：${su.useName || ''} ${su.useContact ? `(${su.useContact})` : ''}</p>
+              <p class="font-bold text-[#24433D]">🏢 使用單位：${su.useName || ''}</p>
               <p class="text-xs text-slate-600">電話：${su.useTel || ''} ${su.useExt ? `分機：${su.useExt}` : ''} ${su.useFax ? `傳真：${su.useFax}` : ''}</p>
               ${su.useAddress ? `<p class="text-xs text-slate-600">地址：${su.useAddress}</p>` : ''}
+              ${ucHtml}
             </div>
           `;
         }
