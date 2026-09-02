@@ -874,14 +874,13 @@
       `;
       container.appendChild(row);
 
-      // 載入該單位的聯絡人（若有舊資料或相容舊的 useContact）
       const ucContainer = document.getElementById(`useContactsContainer_${rowId}`);
       let contactsArr = su.useContacts || [];
       if (contactsArr.length === 0 && su.useContact) {
         contactsArr = [{ name: su.useContact, title: '', mobile: '', tel: '' }];
       }
       if (contactsArr.length === 0) {
-        contactsArr = [{}]; // 預設給一個空白聯絡人欄位
+        contactsArr = [{}];
       }
       contactsArr.forEach(uc => {
         addUseUnitContact(rowId, uc);
@@ -1495,7 +1494,8 @@
 
           unitHeaderHtml = `
             <div class="bg-[#24433D]/10 p-3 rounded-lg border border-[#24433D]/20 mb-3 text-slate-700 space-y-1 text-xs">
-              <p class="font-bold text-[#24433D] text-sm">🏢 使用單位：${su.useName || ''}</p>
+              <p class="font-bold text-[#24433D] text-sm">📍 案場名稱：${su.siteName || '未命名案場'}</p>
+              <p class="font-bold text-slate-800">🏢 使用單位：${su.useName || ''}</p>
               <p class="text-slate-600">電話：${su.useTel || ''} ${su.useExt ? `分機：${su.useExt}` : ''} ${su.useFax ? `傳真：${su.useFax}` : ''}</p>
               ${su.useAddress ? `<p class="text-slate-600">地址：${su.useAddress}</p>` : ''}
               ${ucHtml}
@@ -1959,7 +1959,6 @@
 
         const siteUnits = [];
         cardDiv.querySelectorAll('.site-unit-row').forEach(sRow => {
-          const sRowId = sRow.id;
           const useContacts = [];
           sRow.querySelectorAll('.use-contact-item').forEach(ucItem => {
             useContacts.push({
@@ -2352,7 +2351,7 @@
         });
 
         let unitHeaderHtml = '';
-        if (showSiteUnits && (su.useName || su.useTel || su.useAddress || (su.useContacts && su.useContacts.length > 0))) {
+        if (showSiteUnits && (su.siteName || su.useName || su.useTel || su.useAddress || (su.useContacts && su.useContacts.length > 0))) {
           let ucHtml = '';
           const ucList = su.useContacts || (su.useContact ? [{ name: su.useContact }] : []);
           if (ucList.length > 0) {
@@ -2367,7 +2366,8 @@
 
           unitHeaderHtml = `
             <div class="bg-[#24433D]/10 p-2.5 rounded-lg border border-[#24433D]/20 mb-3 text-slate-700 space-y-0.5">
-              <p class="font-bold text-[#24433D]">🏢 使用單位：${su.useName || ''}</p>
+              <p class="font-bold text-[#24433D] text-sm">📍 案場名稱：${su.siteName || '未命名案場'}</p>
+              <p class="font-bold text-slate-800">🏢 使用單位：${su.useName || ''}</p>
               <p class="text-xs text-slate-600">電話：${su.useTel || ''} ${su.useExt ? `分機：${su.useExt}` : ''} ${su.useFax ? `傳真：${su.useFax}` : ''}</p>
               ${su.useAddress ? `<p class="text-xs text-slate-600">地址：${su.useAddress}</p>` : ''}
               ${ucHtml}
@@ -2403,6 +2403,7 @@
       `;
     }
 
+    // 修正：直接以「公司/單位名稱」進行統整列表，不再依案場拆成多個群組，畫面更簡潔清晰
     function renderEngList() {
       const kw = (document.getElementById('engSearchInput')?.value || '').trim().toLowerCase();
       const container = document.getElementById('engResultContainer');
@@ -2419,89 +2420,30 @@
         return;
       }
 
-      if (activeEngCategory === '實驗室' || activeEngCategory === '公家機關') {
-        const sec = document.createElement('div');
-        sec.className = "bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4";
-        sec.innerHTML = `
-          <div class="flex items-center justify-between pb-2 border-b">
-            <div class="flex items-center gap-2">
-              <span class="w-2 h-5 bg-[#24433D] rounded-full inline-block"></span>
-              <h3 class="font-bold text-slate-800 text-base">${activeEngCategory} 清單</h3>
-            </div>
-            <span class="text-xs bg-[#24433D]/10 text-[#24433D] font-semibold px-2 py-0.5 rounded-full border border-[#24433D]/20">${list.length} 筆紀錄</span>
+      const sec = document.createElement('div');
+      sec.className = "bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4";
+      sec.innerHTML = `
+        <div class="flex items-center justify-between pb-2 border-b">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-5 bg-[#24433D] rounded-full inline-block"></span>
+            <h3 class="font-bold text-slate-800 text-base">${activeEngCategory} 清單 (已依單位統整)</h3>
           </div>
-        `;
+          <span class="text-xs bg-[#24433D]/10 text-[#24433D] font-semibold px-2 py-0.5 rounded-full border border-[#24433D]/20">${list.length} 家單位</span>
+        </div>
+      `;
 
-        list.forEach(it => {
-          const inner = document.createElement('div');
-          inner.className = "bg-slate-50 hover:bg-slate-100/80 p-4 rounded-xl border border-slate-200/80 space-y-3 relative transition cursor-pointer";
-          inner.onclick = (e) => {
-            if (e.target.closest('button') || e.target.closest('a')) return;
-            openEngDetailModal(it.id);
-          };
-          inner.innerHTML = createSingleEngCardHtml(it);
-          sec.appendChild(inner);
-        });
-
-        container.appendChild(sec);
-        return;
-      }
-
-      const siteGroupMap = {};
-      list.forEach(item => {
-        const contacts = item.contacts || {};
-        let itemHasSite = false;
-
-        Object.values(contacts).forEach(cObj => {
-          let siteUnitsArr = Array.isArray(cObj.siteUnits) ? cObj.siteUnits : [];
-          siteUnitsArr.forEach(su => {
-            let cleanS = (su.siteName || '').trim().replace(/^[\d\.\\(\)\\s\-]+/, '').trim();
-            if (cleanS) {
-              itemHasSite = true;
-              if (!siteGroupMap[cleanS]) siteGroupMap[cleanS] = [];
-              if (!siteGroupMap[cleanS].some(entry => entry.item.id === item.id)) {
-                siteGroupMap[cleanS].push({ item: item });
-              }
-            }
-          });
-        });
-
-        if (!itemHasSite) {
-          const rawProj = (item.projectName || '未命名工程').trim();
-          const cleanProj = rawProj.replace(/^[\d\.\\(\)\\s\-]+/, '').trim() || rawProj;
-          if (!siteGroupMap[cleanProj]) siteGroupMap[cleanProj] = [];
-          siteGroupMap[cleanProj].push({ item: item });
-        }
+      list.forEach(it => {
+        const inner = document.createElement('div');
+        inner.className = "bg-slate-50 hover:bg-slate-100/80 p-4 rounded-xl border border-slate-200/80 space-y-3 relative transition cursor-pointer";
+        inner.onclick = (e) => {
+          if (e.target.closest('button') || e.target.closest('a')) return;
+          openEngDetailModal(it.id);
+        };
+        inner.innerHTML = createSingleEngCardHtml(it);
+        sec.appendChild(inner);
       });
 
-      Object.keys(siteGroupMap).forEach(projName => {
-        const entries = siteGroupMap[projName];
-        const card = document.createElement('div');
-        card.className = "bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3";
-        card.innerHTML = `
-          <div class="flex items-center justify-between pb-2 border-b">
-            <div class="flex items-center gap-2">
-              <span class="w-2 h-5 bg-[#24433D] rounded-full inline-block"></span>
-              <h3 class="font-bold text-slate-800 text-base">工程案場：${projName}</h3>
-            </div>
-            <span class="text-xs bg-[#24433D]/10 text-[#24433D] font-semibold px-2 py-0.5 rounded-full border border-[#24433D]/20">${entries.length} 筆紀錄</span>
-          </div>
-        `;
-
-        entries.forEach(entry => {
-          const it = entry.item;
-          const inner = document.createElement('div');
-          inner.className = "bg-slate-50 hover:bg-slate-100/80 p-4 rounded-xl border border-slate-200/80 space-y-3 relative transition cursor-pointer";
-          inner.onclick = (e) => {
-            if (e.target.closest('button') || e.target.closest('a')) return;
-            openEngDetailModal(it.id);
-          };
-          inner.innerHTML = createSingleEngCardHtml(it);
-          card.appendChild(inner);
-        });
-
-        container.appendChild(card);
-      });
+      container.appendChild(sec);
     }
 
     function renderEngSiteQuery() {
